@@ -11,3 +11,279 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Roles {
+  DOCTOR
+  SECRETARY
+}
+
+enum UserStatus {
+  ENABLED
+  DISABLED
+  DELETED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum PaymentStatus {
+  SCHEDULED
+  INPROGRESS
+  COMPLETED
+}
+
+enum SessionStatus {
+  UNCOMPLETED
+  COMPLETED
+  DELETED
+}
+
+enum ImageOwnerType {
+  PATIENT
+  SESSION
+}
+
+model User {
+  id                  String     @id @default(uuid())
+  role                Roles
+  status              UserStatus @default(ENABLED)
+  email               String     @unique
+  full_name           String?
+  password_hash       String
+  phone_number        String
+  is_email_verified   Boolean    @default(false)
+  password_changed_at DateTime?
+  address             String?
+  last_login          DateTime?
+  created_at          DateTime   @default(now())
+  updated_at          DateTime   @updatedAt
+
+  password_resets PasswordReset[]
+  doctor          Doctor?
+  secretary       Secretary?
+
+  @@map("user")
+}
+
+model PasswordReset {
+  id            String    @id @default(uuid())
+  user_id       String
+  otp_code_hash String
+  is_verified   Boolean   @default(false)
+  expires_at    DateTime
+  used_at       DateTime?
+  created_at    DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("password_reset")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  description String?
+  created_at  DateTime @default(now())
+
+  role_permissions RolePermission[]
+
+  @@map("permission")
+}
+
+model Role {
+  id         String   @id @default(uuid())
+  doctor_id  String
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  doctor            Doctor            @relation(fields: [doctor_id], references: [id], onDelete: Cascade)
+  role_permissions  RolePermission[]
+  secretaries       Secretary[]
+
+  @@index([doctor_id])
+  @@map("role")
+}
+
+model RolePermission {
+  id            String @id @default(uuid())
+  role_id       String
+  permission_id String
+
+  role       Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@unique([role_id, permission_id])
+  @@map("role_permission")
+}
+
+model Doctor {
+  id             String   @id @default(uuid())
+  user_id        String   @unique
+  clinic_address String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  user             User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  secretaries      Secretary[]
+  roles            Role[]
+  patients         Patient[]
+  sessions         Session[]
+  website_contents WebsiteContent[]
+
+  @@map("doctor")
+}
+
+model Secretary {
+  id         String   @id @default(uuid())
+  user_id    String   @unique
+  doctor_id  String
+  hired_at   DateTime?
+  role_id    String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  doctor Doctor @relation(fields: [doctor_id], references: [id], onDelete: Cascade)
+  role   Role?  @relation(fields: [role_id], references: [id])
+
+  @@index([doctor_id])
+  @@index([role_id])
+  @@map("seceretry")
+}
+
+model Patient {
+  id              String     @id @default(uuid())
+  doctor_id       String
+  full_name       String
+  phone_number    String
+  birth_date      DateTime?
+  gender          Gender
+  address         String?
+  medical_history String?
+  alergies        String?
+  status          UserStatus @default(ENABLED)
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+
+  doctor   Doctor    @relation(fields: [doctor_id], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@index([doctor_id])
+  @@map("patient")
+}
+
+model Session {
+  id                  String         @id @default(uuid())
+  patient_id          String
+  doctor_id           String
+  session_name        String
+  session_start_date  DateTime?
+  session_end_date    DateTime?
+  total_amount        Float
+  payment_status      PaymentStatus?
+  status              SessionStatus  @default(UNCOMPLETED)
+  diagnosis           String?
+  tooth_numbers       String?
+  description         String?
+  extra_notes         String?
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+
+  patient  Patient   @relation(fields: [patient_id], references: [id], onDelete: Cascade)
+  doctor   Doctor    @relation(fields: [doctor_id], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@map("session")
+}
+
+// Note: owner_type / owner_id form a polymorphic reference (Patient or Session).
+// Prisma has no native polymorphic relations, so these are kept as plain
+// columns rather than a `@relation` foreign key.
+model Image {
+  id          String         @id @default(uuid())
+  owner_type  ImageOwnerType
+  owner_id    String
+  title       String
+  url         String
+  uploaded_at DateTime       @default(now())
+  created_at  DateTime       @default(now())
+
+  @@index([owner_type, owner_id])
+  @@map("image")
+}
+
+model Payment {
+  id           String    @id @default(uuid())
+  session_id   String
+  amount       Float
+  payment_date DateTime?
+  notes        String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  session Session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id])
+  @@map("payment")
+}
+
+model WebsiteContent {
+  id         String   @id @default(uuid())
+  doctor_id  String
+  name       String?
+  type       String?
+  attrs      Json?
+  position   Int?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  doctor Doctor                 @relation(fields: [doctor_id], references: [id], onDelete: Cascade)
+  locals WebsiteContentLocal[]
+
+  @@index([doctor_id])
+  @@map("website_content")
+}
+
+model WebsiteContentLocal {
+  id         String   @id @default(uuid())
+  content_id String
+  language   String?
+  title      String?
+  attrs      Json? 
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  content WebsiteContent @relation(fields: [content_id], references: [id], onDelete: Cascade)
+  seo     WebsiteSeo?
+
+  @@index([content_id])
+  @@map("website_content_local")
+}
+
+model WebsiteSeo {
+  id                    String   @id @default(uuid())
+  content_local_id      String   @unique
+  title                 String?
+  description           String?
+  keywords              String?
+  og_title              String?
+  og_description        String?
+  og_image              String?
+  twitter_title         String?
+  twitter_description   String?
+  twitter_image         String?
+  canonical_url         String?
+  robots                String   @default("index, follow")
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  content_local WebsiteContentLocal @relation(fields: [content_local_id], references: [id], onDelete: Cascade)
+
+  @@map("website_seo")
+}
