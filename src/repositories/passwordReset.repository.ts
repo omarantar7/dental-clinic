@@ -30,5 +30,27 @@ export class PasswordResetRepository {
     return { otp, id: passwordResetRecord.id };
   }
 
+  static async getLatestActiveRequest(
+    userId: string,
+    tx: PrismaClientOrTx = prisma,
+  ) {
+    return tx.passwordReset.findFirst({
+      where: {
+        user_id: userId,
+        used_at: null,
+        expires_at: { gt: new Date() },
+      },
+      orderBy: { created_at: "desc" },
+    });
+  }
 
+  static async markVerified(
+    id: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<void> {
+    await tx.passwordReset.update({
+      where: { id },
+      data: { is_verified: true },
+    });
+  }
 }
