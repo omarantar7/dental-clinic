@@ -3,6 +3,8 @@ import { PasswordResetRepository } from "@/repositories/passwordReset.repository
 import config from "@/config";
 import { EmailService } from "./email.service";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
+import { InvalidOtpException } from "@/exceptions/http/InvalidOtpException";
+import bcrypt from "bcrypt";
 
 export class PasswordResetService {
   static async requestReset(email: string): Promise<void> {
@@ -27,5 +29,32 @@ export class PasswordResetService {
     );
   }
 
+  static async verifyOtp(
+    email: string,
+    otpCode: string,
+  ): Promise<{ verified: true; reset_id: string }> {
+    const user = await UserRepository.findByEmail(email);
+    if (!user) {
+      throw new InvalidOtpException();
+    }
 
+    const resetRequest = await PasswordResetRepository.getLatestActiveRequest(
+      user.id,
+    );
+    if (!resetRequest) {
+      throw new InvalidOtpException();
+    }
+
+    const otpMatches = await bcrypt.compare(
+      otpCode,
+      resetRequest.otp_code_hash,
+    );
+    if (!otpMatches) {
+      throw new InvalidOtpException();
+    }
+
+    await PasswordResetRepository.markVerified(resetRequest.id);
+
+    return { verified: true, reset_id: resetRequest.id };
+  }
 }

@@ -4,6 +4,18 @@ const RequestPasswordResetSchema = z.object({
   email: z.email(),
 });
 
+const VerifyOtpSchema = z.object({
+  email: z.email(),
+  otp_code: z.string().length(4),
+});
+
 type RequestPasswordResetInput = z.infer<typeof RequestPasswordResetSchema>;
 
-export { RequestPasswordResetSchema, type RequestPasswordResetInput };
+type VerifyOtpInput = z.infer<typeof VerifyOtpSchema>;
+
+export {
+  RequestPasswordResetSchema,
+  VerifyOtpSchema,
+  type RequestPasswordResetInput,
+  type VerifyOtpInput,
+};
