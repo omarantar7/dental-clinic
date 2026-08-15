@@ -1,3 +1,4 @@
+import prisma from "@/lib/db";
 import { UserRepository } from "@/repositories/user.repository";
 import { PasswordResetRepository } from "@/repositories/passwordReset.repository";
 import config from "@/config";
@@ -56,5 +57,37 @@ export class PasswordResetService {
     await PasswordResetRepository.markVerified(resetRequest.id);
 
     return { verified: true, reset_id: resetRequest.id };
+  }
+
+  static async confirmNewPassword(
+    resetId: string,
+    newPassword: string,
+  ): Promise<void> {
+    const resetRequest = await PasswordResetRepository.getById(resetId);
+
+    if (!resetRequest) {
+      throw new InvalidOtpException();
+    }
+
+    if (!resetRequest.is_verified) {
+      throw new InvalidOtpException();
+    }
+
+    if (resetRequest.used_at) {
+      throw new InvalidOtpException();
+    }
+
+    if (resetRequest.expires_at < new Date()) {
+      throw new InvalidOtpException();
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await UserRepository.updatePassword(
+        resetRequest.user_id,
+        newPassword,
+        tx,
+      );
+      await PasswordResetRepository.markUsed(resetRequest.id, tx);
+    });
   }
 }

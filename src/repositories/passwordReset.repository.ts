@@ -53,4 +53,19 @@ export class PasswordResetRepository {
       data: { is_verified: true },
     });
   }
+
+  static async getById(id: string, tx: PrismaClientOrTx = prisma) {
+    const record = await tx.passwordReset.findUnique({ where: { id } });
+    return record;
+  }
+
+  static async markUsed(
+    id: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<void> {
+    await tx.passwordReset.update({
+      where: { id },
+      data: { used_at: new Date() },
+    });
+  }
 }
