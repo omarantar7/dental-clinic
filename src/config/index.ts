@@ -7,5 +7,6 @@ export default {
     secretKey: env.JWT_SECRET_KEY,
     tokenExpiration: env.TOKEN_EXPIRATION,
     refreshTokenExpiration: env.REFRESH_TOKEN_EXPIRATION,
+    otpExpirationMinutes: env.OTP_EXPIRATION_MINUTES,
   },
 };
