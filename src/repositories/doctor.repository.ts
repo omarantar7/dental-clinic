@@ -1,7 +1,7 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
-import { Doctor, IdentifiableDoctor } from "@/types/doctor";
+import { Doctor, DoctorProfile, IdentifiableDoctor } from "@/types/doctor";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
 
@@ -35,6 +35,18 @@ export class DoctorRepository {
   ): Promise<IdentifiableDoctor | null> {
     const doctor = await tx.doctor.findUnique({ where: { user_id: userId } });
     return doctor ? this.toIdentifiableDoctor(doctor) : null;
+  }
+
+  static async getDoctorProfileByUserId(
+    userId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<DoctorProfile> {
+    const doctor = await tx.doctor.findUnique({
+      where: { user_id: userId },
+      include: { user: true },
+    });
+    if (!doctor) throw new NotFoundException("doctor not found");
+    return this.toDoctorProfile(doctor);
   }
 
   static async updateDoctor(
@@ -77,6 +89,32 @@ export class DoctorRepository {
       id: doctor.id,
       user_id: doctor.user_id,
       clinic_address: doctor.clinic_address,
+    };
+  }
+
+  private static toDoctorProfile(doctor: {
+    id: string;
+    user_id: string;
+    clinic_address: string | null;
+    created_at: Date;
+    updated_at: Date;
+    user: {
+      email: string;
+      phone_number: string;
+      address: string | null;
+      full_name: string | null;
+    };
+  }): DoctorProfile {
+    return {
+      id: doctor.id,
+      user_id: doctor.user_id,
+      clinic_address: doctor.clinic_address,
+      email: doctor.user.email,
+      phone_number: doctor.user.phone_number,
+      address: doctor.user.address,
+      full_name: doctor.user.full_name,
+      created_at: doctor.created_at,
+      updated_at: doctor.updated_at,
     };
   }
 }
