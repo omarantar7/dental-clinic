@@ -1,4 +1,3 @@
-
 import config from "@/config";
 import { TokenUserPayload } from "@/config/types";
 import {
@@ -6,7 +5,7 @@ import {
   TokenExpiredException,
 } from "@/exceptions/http/AuthenticationException";
 import jwt, { SignOptions } from "jsonwebtoken";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import ms, { StringValue } from "ms";
 
 export class AuthService {
@@ -76,5 +75,15 @@ export class AuthService {
     const refreshToken = this.generateRefreshToken(payload);
     this.setTokenIntoCookie(res, token);
     this.setRefreshTokenIntoCookie(res, refreshToken);
+  }
+
+  getAuthUser(request: NextRequest): TokenUserPayload | null {
+    const raw = request.headers.get("user-payload");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as TokenUserPayload;
+    } catch {
+      return null;
+    }
   }
 }

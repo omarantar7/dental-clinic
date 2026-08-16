@@ -1,5 +1,8 @@
 import prisma from "@/lib/db";
-import type { RegisterDoctorInput } from "@/types/doctor";
+import type {
+  DoctorProfile,
+  RegisterDoctorInput,
+} from "@/types/doctor";
 import type { SafeUser } from "@/types/user";
 import type { IdentifiableDoctor } from "@/types/doctor";
 import { UserRepository } from "@/repositories/user.repository";
@@ -22,7 +25,9 @@ export class DoctorService {
     });
   }
 
-  static async getDoctorProfile(userId: string) {
-    return DoctorRepository.getDoctorByUserId(userId);
+  static async getMyProfile(userId: string): Promise<DoctorProfile> {
+    return DoctorRepository.getDoctorProfileByUserId(userId);
   }
+
+ 
 }
