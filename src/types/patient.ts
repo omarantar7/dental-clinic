@@ -11,7 +11,10 @@ const PatientCreateSchema = z.object({
   alergies: z.string().nullable().optional(),
 });
 
+const PatientUpdateSchema = PatientCreateSchema.partial();
+
 type PatientCreateInput = z.infer<typeof PatientCreateSchema>;
+type PatientUpdateInput = z.infer<typeof PatientUpdateSchema>;
 
 const parsePatientListQuery = createRestQueryParser({
   allowedSortFields: ["id", "full_name", "phone_number", "created_at"] as const,
@@ -55,5 +58,7 @@ export {
   type PatientListItem,
   type PatientDetail,
   type PatientCreateInput,
+  type PatientUpdateInput,
   PatientCreateSchema,
+  PatientUpdateSchema,
 };

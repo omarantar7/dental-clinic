@@ -1,7 +1,11 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
-import  type { PatientCreateInput, PatientListItem } from "@/types/patient";
+import type {
+  PatientCreateInput,
+  PatientListItem,
+  PatientUpdateInput,
+} from "@/types/patient";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
 
@@ -137,5 +141,29 @@ export class PatientRepository {
         alergies: data.alergies ?? null,
       },
     });
+  }
+
+  static async updatePatient(
+    id: string,
+    doctorId: string,
+    data: PatientUpdateInput,
+    tx: PrismaClientOrTx = prisma,
+  ) {
+    await this.getPatient(id, doctorId, tx);
+
+    try {
+      return await tx.patient.update({
+        where: { id },
+        data: {
+          ...data,
+          updated_at: new Date(),
+        },
+      });
+    } catch (error: any) {
+      if (error.code === "P2025") {
+        throw new NotFoundException("patient not found");
+      }
+      throw new Error("Failed to update patient", { cause: error });
+    }
   }
 }
