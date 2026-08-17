@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import UniqueException from "@/exceptions/http/UniqueException";
+import { BadRequestException } from "@/exceptions/http/BadRequestException";
 
 export function handleApiError(error: unknown) {
   console.error(error);
@@ -9,6 +10,9 @@ export function handleApiError(error: unknown) {
     return NextResponse.json({ message: error.message }, { status: 404 });
   }
   if (error instanceof UniqueException) {
+    return NextResponse.json({ message: error.message }, { status: 400 });
+  }
+  if (error instanceof BadRequestException) {
     return NextResponse.json({ message: error.message }, { status: 400 });
   }
 
