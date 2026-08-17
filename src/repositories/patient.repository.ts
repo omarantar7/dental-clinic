@@ -1,7 +1,7 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
-import { PatientListItem } from "@/types/patient";
+import  type { PatientCreateInput, PatientListItem } from "@/types/patient";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
 
@@ -71,7 +71,10 @@ export class PatientRepository {
     const sessions =
       patientIds.length > 0
         ? await tx.session.findMany({
-            where: { patient_id: { in: patientIds }, status: { not: "DELETED" } },
+            where: {
+              patient_id: { in: patientIds },
+              status: { not: "DELETED" },
+            },
             select: {
               patient_id: true,
               total_amount: true,
@@ -91,7 +94,10 @@ export class PatientRepository {
         paid_balance: 0,
       };
       current.total_balance += session.total_amount;
-      current.paid_balance += session.payments.reduce((sum, p) => sum + p.amount, 0);
+      current.paid_balance += session.payments.reduce(
+        (sum, p) => sum + p.amount,
+        0,
+      );
       balanceByPatientId.set(session.patient_id, current);
     }
 
@@ -112,5 +118,24 @@ export class PatientRepository {
     });
 
     return { data, page, limit, total };
+  }
+
+  static async createPatient(
+    doctorId: string,
+    data: PatientCreateInput,
+    tx: PrismaClientOrTx = prisma,
+  ) {
+    return tx.patient.create({
+      data: {
+        doctor_id: doctorId,
+        full_name: data.full_name,
+        phone_number: data.phone_number,
+        gender: data.gender,
+        birth_date: data.birth_date ?? null,
+        address: data.address ?? null,
+        medical_history: data.medical_history ?? null,
+        alergies: data.alergies ?? null,
+      },
+    });
   }
 }

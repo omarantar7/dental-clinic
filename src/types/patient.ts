@@ -1,6 +1,18 @@
 import z from "zod";
 import { createRestQueryParser } from "@/lib/helpers/rest-query";
 
+const PatientCreateSchema = z.object({
+  full_name: z.string().min(2).max(100),
+  phone_number: z.string().min(6),
+  gender: z.enum(["MALE", "FEMALE"]),
+  birth_date: z.coerce.date().nullable().optional(),
+  address: z.string().nullable().optional(),
+  medical_history: z.string().nullable().optional(),
+  alergies: z.string().nullable().optional(),
+});
+
+type PatientCreateInput = z.infer<typeof PatientCreateSchema>;
+
 const parsePatientListQuery = createRestQueryParser({
   allowedSortFields: ["id", "full_name", "phone_number", "created_at"] as const,
   allowedSearchFields: [
@@ -38,4 +50,10 @@ type PatientDetail = {
   updated_at: Date;
 };
 
-export { parsePatientListQuery, type PatientListItem, type PatientDetail };
+export {
+  parsePatientListQuery,
+  type PatientListItem,
+  type PatientDetail,
+  type PatientCreateInput,
+  PatientCreateSchema,
+};
