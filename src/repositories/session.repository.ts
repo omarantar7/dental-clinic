@@ -140,7 +140,8 @@ export class SessionRepository {
         id: { not: id },
       },
       include: { payments: true },
-      orderBy: { session_start_date: "desc" },
+      orderBy: { created_at: "desc" },
+      take: 3,
     });
 
     return {
