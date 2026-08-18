@@ -5,10 +5,12 @@ import type {
   PatientBalance,
   RawSessionWithPayments,
   Session,
+  SessionCreateInput,
   SessionDetail,
   SessionWithPayments,
 } from "@/types/session";
 import { ParsedListQuery } from "@/lib/helpers/query-parser";
+import { ConflictException } from "@/exceptions/http/ConflictException";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
 
@@ -32,7 +34,10 @@ export class SessionRepository {
   }
 
   private static toSession(session: RawSessionWithPayments): Session {
-    const amountPaid = session.payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const amountPaid = session.payments.reduce(
+      (sum, payment) => sum + payment.amount,
+      0,
+    );
     const amountOwed = session.total_amount - amountPaid;
 
     return {
@@ -43,7 +48,10 @@ export class SessionRepository {
       session_end_date: session.session_end_date,
       total_amount: session.total_amount,
       status: session.status as Session["status"],
-      payment_status: this.computePaymentStatus(session.total_amount, amountPaid),
+      payment_status: this.computePaymentStatus(
+        session.total_amount,
+        amountPaid,
+      ),
       diagnosis: session.diagnosis,
       tooth_numbers: session.tooth_numbers,
       description: session.description,
@@ -62,6 +70,45 @@ export class SessionRepository {
       ...this.toSession(session),
       payments: session.payments,
     };
+  }
+
+  private static async ensureNoTimeConflict(
+    doctorId: string,
+    startDate: Date,
+    endDate: Date,
+    excludedSessionId?: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<void> {
+    const sessions = await tx.session.findMany({
+      where: {
+        doctor_id: doctorId,
+        status: { not: "DELETED" },
+      },
+      select: {
+        id: true,
+        session_start_date: true,
+        session_end_date: true,
+      },
+    });
+
+    const hasConflict = sessions.some((session) => {
+      if (excludedSessionId && session.id === excludedSessionId) return false;
+      if (!session.session_start_date || !session.session_end_date)
+        return false;
+      return this.hasOverlap(
+        startDate,
+        endDate,
+        new Date(session.session_start_date),
+        new Date(session.session_end_date),
+      );
+    });
+
+    if (hasConflict) {
+      throw new ConflictException(
+        "This time slot overlaps an existing appointment.",
+        { code: "SESSION_TIME_CONFLICT" },
+      );
+    }
   }
 
   static async getSessionDetail(
@@ -112,7 +159,12 @@ export class SessionRepository {
     doctorId: string,
     query: ParsedListQuery,
     tx: PrismaClientOrTx = prisma,
-  ): Promise<{ data: SessionWithPayments[]; page: number; limit: number; total: number }> {
+  ): Promise<{
+    data: SessionWithPayments[];
+    page: number;
+    limit: number;
+    total: number;
+  }> {
     const { page, limit, sortBy, sortOrder, where: searchWhere } = query;
 
     const where: Prisma.SessionWhereInput = {
@@ -142,14 +194,66 @@ export class SessionRepository {
     };
   }
 
+  static async createSession(
+    doctorId: string,
+    data: SessionCreateInput,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<Session> {
+    const patient = await tx.patient.findFirst({
+      where: {
+        id: data.patient_id,
+        doctor_id: doctorId,
+        status: { not: "DELETED" },
+      },
+      select: { id: true },
+    });
 
+    if (!patient) {
+      throw new NotFoundException("patient not found");
+    }
+
+    const startDate = new Date(data.session_start_date);
+    const endDate = new Date(data.session_end_date);
+    await this.ensureNoTimeConflict(
+      doctorId,
+      startDate,
+      endDate,
+      undefined,
+      tx,
+    );
+
+    const session = await tx.session.create({
+      data: {
+        doctor_id: doctorId,
+        patient_id: data.patient_id,
+        session_name: data.session_name,
+        session_start_date: startDate,
+        session_end_date: endDate,
+        total_amount: data.total_amount,
+        diagnosis: data.diagnosis ?? null,
+        tooth_numbers: data.tooth_numbers ?? null,
+        description: data.description ?? null,
+        extra_notes: data.extra_notes ?? null,
+      },
+    });
+
+    return this.toSession({
+      ...session,
+      payments: [],
+    });
+  }
 
   static async listByPatientId(
     patientId: string,
     doctorId: string,
     query: ParsedListQuery,
     tx: PrismaClientOrTx = prisma,
-  ): Promise<{ data: SessionWithPayments[]; page: number; limit: number; total: number }> {
+  ): Promise<{
+    data: SessionWithPayments[];
+    page: number;
+    limit: number;
+    total: number;
+  }> {
     const { page, limit, sortBy, sortOrder, where: searchWhere } = query;
 
     const where: Prisma.SessionWhereInput = {
@@ -197,10 +301,17 @@ export class SessionRepository {
       },
     });
 
-    const totalBilled = sessions.reduce((sum, session) => sum + session.total_amount, 0);
+    const totalBilled = sessions.reduce(
+      (sum, session) => sum + session.total_amount,
+      0,
+    );
     const totalPaid = sessions.reduce(
       (sum, session) =>
-        sum + session.payments.reduce((paymentSum, payment) => paymentSum + payment.amount, 0),
+        sum +
+        session.payments.reduce(
+          (paymentSum, payment) => paymentSum + payment.amount,
+          0,
+        ),
       0,
     );
 
