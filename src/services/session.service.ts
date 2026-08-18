@@ -8,4 +8,8 @@ export class SessionService {
   ) {
     return SessionRepository.listByPatientId(patientId, doctorId, query);
   }
+
+  static async getPatientBalance(patientId: string, doctorId: string) {
+    return SessionRepository.getPatientBalance(patientId, doctorId);
+  }
 }

@@ -71,8 +71,16 @@ type RawSessionWithPayments = {
   }[];
 };
 
+type PatientBalance = {
+  patient_id: string;
+  total_billed: number;
+  total_paid: number;
+  total_owed: number;
+};
+
 export {
   parseSessionListQuery,
   type SessionWithPayments,
   type RawSessionWithPayments,
+  type PatientBalance,
 };
