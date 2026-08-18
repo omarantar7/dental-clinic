@@ -1,6 +1,13 @@
 import { SessionRepository } from "@/repositories/session.repository";
 
 export class SessionService {
+  static async listSessions(
+    doctorId: string,
+    query: Parameters<typeof SessionRepository.listSessions>[1],
+  ) {
+    return SessionRepository.listSessions(doctorId, query);
+  }
+
   static async getSessionsForPatient(
     patientId: string,
     doctorId: string,
