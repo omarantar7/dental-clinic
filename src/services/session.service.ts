@@ -17,6 +17,10 @@ export class SessionService {
     return SessionRepository.listByPatientId(patientId, doctorId, query);
   }
 
+  static async getSession(id: string, doctorId: string) {
+    return SessionRepository.getSessionDetail(id, doctorId);
+  }
+
   static async createSession(doctorId: string, data: SessionCreateInput) {
     return SessionRepository.createSession(doctorId, data);
   }
