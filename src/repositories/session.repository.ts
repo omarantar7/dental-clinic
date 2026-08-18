@@ -7,6 +7,7 @@ import type {
   Session,
   SessionCreateInput,
   SessionDetail,
+  SessionUpdateInput,
   SessionWithPayments,
 } from "@/types/session";
 import { ParsedListQuery } from "@/lib/helpers/query-parser";
@@ -109,6 +110,30 @@ export class SessionRepository {
         { code: "SESSION_TIME_CONFLICT" },
       );
     }
+  }
+
+  static async getSessionById(
+    id: string,
+    doctorId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<SessionWithPayments> {
+    const session = await tx.session.findFirst({
+      where: {
+        id,
+        doctor_id: doctorId,
+        status: { not: "DELETED" },
+      },
+      include: { payments: true },
+    });
+
+    if (!session) {
+      throw new NotFoundException("session not found");
+    }
+
+    return this.toSessionWithPayments({
+      ...session,
+      payments: session.payments,
+    });
   }
 
   static async getSessionDetail(
@@ -242,6 +267,44 @@ export class SessionRepository {
       ...session,
       payments: [],
     });
+  }
+
+  static async updateSession(
+    id: string,
+    doctorId: string,
+    data: SessionUpdateInput,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<SessionWithPayments> {
+    const existing = await this.getSessionById(id, doctorId, tx);
+
+    const nextStart =
+      data.session_start_date !== undefined
+        ? new Date(data.session_start_date)
+        : existing.session_start_date;
+    const nextEnd =
+      data.session_end_date !== undefined
+        ? new Date(data.session_end_date)
+        : existing.session_end_date;
+
+    if (nextStart && nextEnd) {
+      await this.ensureNoTimeConflict(doctorId, nextStart, nextEnd, id, tx);
+    }
+
+    const updatedSession = await tx.session.update({
+      where: { id },
+      data: {
+        ...data,
+        ...(data.session_start_date !== undefined && {
+          session_start_date: nextStart,
+        }),
+        ...(data.session_end_date !== undefined && {
+          session_end_date: nextEnd,
+        }),
+      },
+      include: { payments: true },
+    });
+
+    return this.toSessionWithPayments(updatedSession);
   }
 
   static async listByPatientId(
