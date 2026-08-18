@@ -1,6 +1,7 @@
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
 import type {
+  PatientBalance,
   RawSessionWithPayments,
   SessionWithPayments,
 } from "@/types/session";
@@ -85,6 +86,37 @@ export class SessionRepository {
       page,
       limit,
       total,
+    };
+  }
+
+  static async getPatientBalance(
+    patientId: string,
+    doctorId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<PatientBalance> {
+    const sessions = await tx.session.findMany({
+      where: {
+        patient_id: patientId,
+        doctor_id: doctorId,
+        status: { not: "DELETED" },
+      },
+      select: {
+        total_amount: true,
+        payments: { select: { amount: true } },
+      },
+    });
+
+    const totalBilled = sessions.reduce((sum, s) => sum + s.total_amount, 0);
+    const totalPaid = sessions.reduce(
+      (sum, s) => sum + s.payments.reduce((pSum, p) => pSum + p.amount, 0),
+      0,
+    );
+
+    return {
+      patient_id: patientId,
+      total_billed: totalBilled,
+      total_paid: totalPaid,
+      total_owed: totalBilled - totalPaid,
     };
   }
 }
