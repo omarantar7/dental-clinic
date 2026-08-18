@@ -1,4 +1,5 @@
 import { SessionRepository } from "@/repositories/session.repository";
+import type { SessionCreateInput } from "@/types/session";
 
 export class SessionService {
   static async listSessions(
@@ -14,6 +15,10 @@ export class SessionService {
     query: Parameters<typeof SessionRepository.listByPatientId>[2],
   ) {
     return SessionRepository.listByPatientId(patientId, doctorId, query);
+  }
+
+  static async createSession(doctorId: string, data: SessionCreateInput) {
+    return SessionRepository.createSession(doctorId, data);
   }
 
   static async getPatientBalance(patientId: string, doctorId: string) {
