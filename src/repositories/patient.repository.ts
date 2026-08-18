@@ -166,4 +166,24 @@ export class PatientRepository {
       throw new Error("Failed to update patient", { cause: error });
     }
   }
+
+  static async softDeletePatient(
+    id: string,
+    doctorId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<void> {
+    await this.getPatient(id, doctorId, tx);
+
+    try {
+      await tx.patient.update({
+        where: { id },
+        data: { status: "DELETED", updated_at: new Date() },
+      });
+    } catch (error: any) {
+      if (error.code === "P2025") {
+        throw new NotFoundException("patient not found");
+      }
+      throw new Error("Failed to delete patient", { cause: error });
+    }
+  }
 }
