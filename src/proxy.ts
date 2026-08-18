@@ -9,7 +9,7 @@ import {
 
 const authResolver = new AuthResolver(new AuthService());
 
-const PROTECTED_ROUTES = ["/api/dashboard", "/api/doctors/me", "/api/patients"];
+const PROTECTED_ROUTES = ["/api/dashboard", "/api/doctors/me", "/api/patients", "/api/sessions"];
 const PUBLIC_ROUTES = ["/api/auth/login", "/api/auth/logout"];
 
 export function proxy(req: NextRequest) {

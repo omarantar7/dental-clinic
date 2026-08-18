@@ -1,8 +1,11 @@
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
+import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import type {
   PatientBalance,
   RawSessionWithPayments,
+  Session,
+  SessionDetail,
   SessionWithPayments,
 } from "@/types/session";
 import { ParsedListQuery } from "@/lib/helpers/query-parser";
@@ -10,18 +13,27 @@ import { ParsedListQuery } from "@/lib/helpers/query-parser";
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
 
 export class SessionRepository {
-  private static toSessionWithPayments(
-    session: RawSessionWithPayments,
-  ): SessionWithPayments {
-    const amountPaid = session.payments.reduce((sum, p) => sum + p.amount, 0);
-    const amountOwed = session.total_amount - amountPaid;
+  static hasOverlap(
+    startA: Date,
+    endA: Date,
+    startB: Date,
+    endB: Date,
+  ): boolean {
+    return startA < endB && endA > startB;
+  }
 
-    const paymentStatus: SessionWithPayments["payment_status"] =
-      amountPaid <= 0
-        ? "SCHEDULED"
-        : amountPaid >= session.total_amount
-          ? "COMPLETED"
-          : "INPROGRESS";
+  private static computePaymentStatus(
+    totalAmount: number,
+    amountPaid: number,
+  ): Session["payment_status"] {
+    if (amountPaid <= 0) return "SCHEDULED";
+    if (amountPaid >= totalAmount) return "COMPLETED";
+    return "INPROGRESS";
+  }
+
+  private static toSession(session: RawSessionWithPayments): Session {
+    const amountPaid = session.payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const amountOwed = session.total_amount - amountPaid;
 
     return {
       id: session.id,
@@ -30,8 +42,8 @@ export class SessionRepository {
       session_start_date: session.session_start_date,
       session_end_date: session.session_end_date,
       total_amount: session.total_amount,
-      status: session.status as SessionWithPayments["status"],
-      payment_status: paymentStatus,
+      status: session.status as Session["status"],
+      payment_status: this.computePaymentStatus(session.total_amount, amountPaid),
       diagnosis: session.diagnosis,
       tooth_numbers: session.tooth_numbers,
       description: session.description,
@@ -40,27 +52,104 @@ export class SessionRepository {
       amount_owed: amountOwed,
       created_at: session.created_at,
       updated_at: session.updated_at,
+    };
+  }
+
+  private static toSessionWithPayments(
+    session: RawSessionWithPayments,
+  ): SessionWithPayments {
+    return {
+      ...this.toSession(session),
       payments: session.payments,
     };
   }
 
-  /**
-   * Scoped by BOTH patientId and doctorId — doctorId is defense in
-   * depth in case a patientId from another tenant ever reaches this
-   * method directly (callers should already verify patient ownership
-   * via PatientRepository first).
-   */
+  static async getSessionDetail(
+    id: string,
+    doctorId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<SessionDetail> {
+    const session = await tx.session.findFirst({
+      where: {
+        id,
+        doctor_id: doctorId,
+        status: { not: "DELETED" },
+      },
+      include: {
+        patient: true,
+        payments: true,
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException("session not found");
+    }
+
+    const previousSessions = await tx.session.findMany({
+      where: {
+        patient_id: session.patient_id,
+        doctor_id: doctorId,
+        status: { not: "DELETED" },
+        id: { not: id },
+      },
+      include: { payments: true },
+      orderBy: { session_start_date: "desc" },
+    });
+
+    return {
+      ...this.toSessionWithPayments({
+        ...session,
+        payments: session.payments,
+      }),
+      patient: session.patient,
+      previous_sessions: previousSessions.map((s) =>
+        this.toSessionWithPayments({ ...s, payments: s.payments }),
+      ),
+    };
+  }
+
+  static async listSessions(
+    doctorId: string,
+    query: ParsedListQuery,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<{ data: SessionWithPayments[]; page: number; limit: number; total: number }> {
+    const { page, limit, sortBy, sortOrder, where: searchWhere } = query;
+
+    const where: Prisma.SessionWhereInput = {
+      doctor_id: doctorId,
+      status: { not: "DELETED" },
+      ...searchWhere,
+    };
+
+    const [sessions, total] = await Promise.all([
+      tx.session.findMany({
+        where,
+        include: { payments: true },
+        orderBy: { [sortBy]: sortOrder },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      tx.session.count({ where }),
+    ]);
+
+    return {
+      data: sessions.map((session) =>
+        this.toSessionWithPayments({ ...session, payments: session.payments }),
+      ),
+      page,
+      limit,
+      total,
+    };
+  }
+
+
+
   static async listByPatientId(
     patientId: string,
     doctorId: string,
     query: ParsedListQuery,
     tx: PrismaClientOrTx = prisma,
-  ): Promise<{
-    data: SessionWithPayments[];
-    page: number;
-    limit: number;
-    total: number;
-  }> {
+  ): Promise<{ data: SessionWithPayments[]; page: number; limit: number; total: number }> {
     const { page, limit, sortBy, sortOrder, where: searchWhere } = query;
 
     const where: Prisma.SessionWhereInput = {
@@ -82,7 +171,9 @@ export class SessionRepository {
     ]);
 
     return {
-      data: sessions.map((s) => this.toSessionWithPayments(s)),
+      data: sessions.map((session) =>
+        this.toSessionWithPayments({ ...session, payments: session.payments }),
+      ),
       page,
       limit,
       total,
@@ -106,9 +197,10 @@ export class SessionRepository {
       },
     });
 
-    const totalBilled = sessions.reduce((sum, s) => sum + s.total_amount, 0);
+    const totalBilled = sessions.reduce((sum, session) => sum + session.total_amount, 0);
     const totalPaid = sessions.reduce(
-      (sum, s) => sum + s.payments.reduce((pSum, p) => pSum + p.amount, 0),
+      (sum, session) =>
+        sum + session.payments.reduce((paymentSum, payment) => paymentSum + payment.amount, 0),
       0,
     );
 
