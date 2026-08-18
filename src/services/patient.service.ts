@@ -24,4 +24,8 @@ export class PatientService {
   ) {
     return PatientRepository.updatePatient(id, doctorId, data);
   }
+
+  static async deletePatient(id: string, doctorId: string): Promise<void> {
+    return PatientRepository.softDeletePatient(id, doctorId);
+  }
 }
