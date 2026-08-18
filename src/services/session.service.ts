@@ -33,6 +33,10 @@ export class SessionService {
     return SessionRepository.updateSession(id, doctorId, data);
   }
 
+  static async deleteSession(id: string, doctorId: string): Promise<void> {
+    return SessionRepository.softDeleteSession(id, doctorId);
+  }
+
   static async getPatientBalance(patientId: string, doctorId: string) {
     return SessionRepository.getPatientBalance(patientId, doctorId);
   }

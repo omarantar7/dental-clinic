@@ -307,6 +307,19 @@ export class SessionRepository {
     return this.toSessionWithPayments(updatedSession);
   }
 
+  static async softDeleteSession(
+    id: string,
+    doctorId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<void> {
+    await this.getSessionById(id, doctorId, tx);
+
+    await tx.session.update({
+      where: { id },
+      data: { status: "DELETED", updated_at: new Date() },
+    });
+  }
+
   static async listByPatientId(
     patientId: string,
     doctorId: string,
