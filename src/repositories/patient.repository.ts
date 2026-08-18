@@ -6,16 +6,9 @@ import type {
   PatientListItem,
   PatientUpdateInput,
 } from "@/types/patient";
+import { ParsedListQuery } from "@/lib/helpers/query-parser";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
-
-interface ParsedPatientListQuery {
-  page: number;
-  limit: number;
-  sortBy: string;
-  sortOrder: "asc" | "desc";
-  where: Record<string, any>;
-}
 
 export class PatientRepository {
   static async getPatient(
@@ -36,7 +29,7 @@ export class PatientRepository {
 
   static async listPatients(
     doctorId: string,
-    query: ParsedPatientListQuery,
+    query: ParsedListQuery,
     tx: PrismaClientOrTx = prisma,
   ): Promise<{
     data: PatientListItem[];
