@@ -220,6 +220,34 @@ export class SessionRepository {
     };
   }
 
+  static async listCalendarSessions(
+    doctorId: string,
+    from: Date,
+    toExclusive: Date,
+    tx: PrismaClientOrTx = prisma,
+  ) {
+    return tx.session.findMany({
+      where: {
+        doctor_id: doctorId,
+        status: { not: "DELETED" },
+        session_start_date: { lt: toExclusive },
+        session_end_date: { gt: from },
+      },
+      select: {
+        id: true,
+        patient_id: true,
+        session_name: true,
+        session_start_date: true,
+        session_end_date: true,
+        total_amount: true,
+        status: true,
+        patient: { select: { full_name: true } },
+        payments: { select: { amount: true } },
+      },
+      orderBy: { session_start_date: "asc" },
+    });
+  }
+
   static async createSession(
     doctorId: string,
     data: SessionCreateInput,
