@@ -58,4 +58,14 @@ export class ImageRepository {
       },
     });
   }
+
+  static async listSessionImages(sessionId: string) {
+    return prisma.image.findMany({
+      where: {
+        owner_type: "SESSION",
+        owner_id: sessionId,
+      },
+      orderBy: { uploaded_at: "desc" },
+    });
+  }
 }

@@ -72,6 +72,22 @@ export class ImageService {
     );
   }
 
+  static async listSessionImages(
+    sessionId: string,
+    doctorId: string,
+  ): Promise<ImageResponse[]> {
+    await SessionRepository.getSessionById(sessionId, doctorId);
+
+    const images = await ImageRepository.listSessionImages(sessionId);
+
+    return Promise.all(
+      images.map(async (image) => ({
+        ...image,
+        url: await getSignedImageUrl(image.url),
+      })),
+    );
+  }
+
   static async deletePatientImage(
     patientId: string,
     doctorId: string,
