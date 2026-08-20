@@ -57,4 +57,19 @@ export class PaymentService {
       return payment;
     });
   }
+
+  static async deletePayment(paymentId: string, doctorId: string) {
+    return prisma.$transaction(async (tx) => {
+      const payment = await PaymentRepository.deletePayment(
+        paymentId,
+        doctorId,
+        tx,
+      );
+      await SessionRepository.updatePaymentStatus(
+        payment.session_id,
+        doctorId,
+        tx,
+      );
+    });
+  }
 }
