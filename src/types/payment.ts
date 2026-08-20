@@ -1,3 +1,5 @@
+import { createRestQueryParser } from "@/lib/helpers/rest-query";
+
 type Payment = {
   id: string;
   session_id: string;
@@ -8,4 +10,20 @@ type Payment = {
   updated_at: Date;
 };
 
-export { type Payment };
+const parsePaymentListQuery = createRestQueryParser({
+  allowedSortFields: [
+    "payment_date",
+    "amount",
+    "created_at",
+  ] as const,
+  allowedSearchFields: ["notes"] as const,
+  defaultSortField: "payment_date",
+});
+
+type PaymentListQuery = ReturnType<typeof parsePaymentListQuery>;
+
+export {
+  parsePaymentListQuery,
+  type Payment,
+  type PaymentListQuery,
+};
