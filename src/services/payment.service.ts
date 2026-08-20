@@ -4,6 +4,7 @@ import { SessionRepository } from "@/repositories/session.repository";
 import type {
   PaymentCreateInput,
   PaymentListQuery,
+  PaymentUpdateInput,
 } from "@/types/payment";
 
 export class PaymentService {
@@ -36,5 +37,24 @@ export class PaymentService {
     return PaymentRepository.listBySessionId(sessionId, doctorId, query);
   }
 
-
+  static async updatePayment(
+    paymentId: string,
+    doctorId: string,
+    data: PaymentUpdateInput,
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const payment = await PaymentRepository.updatePayment(
+        paymentId,
+        doctorId,
+        data,
+        tx,
+      );
+      await SessionRepository.updatePaymentStatus(
+        payment.session_id,
+        doctorId,
+        tx,
+      );
+      return payment;
+    });
+  }
 }

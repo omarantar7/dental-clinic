@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { AuthorizationException } from "@/exceptions/http/AuthorizationException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import UniqueException from "@/exceptions/http/UniqueException";
 import { HttpException } from "@/exceptions/http/HttpException";
@@ -31,6 +32,9 @@ export function handleApiError(error: unknown) {
   }
   if (error instanceof BadRequestException) {
     return NextResponse.json({ message: error.message }, { status: 400 });
+  }
+  if (error instanceof AuthorizationException) {
+    return NextResponse.json({ message: error.message }, { status: 403 });
   }
 
   return NextResponse.json(
