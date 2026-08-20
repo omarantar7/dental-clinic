@@ -15,6 +15,7 @@ const PROTECTED_ROUTES = [
   "/api/patients",
   "/api/sessions",
   "/api/calendar",
+  "/api/payments",
 ];
 const PUBLIC_ROUTES = ["/api/auth/login", "/api/auth/logout"];
 

@@ -17,6 +17,12 @@ const PaymentCreateSchema = z.object({
   notes: z.string().optional(),
 });
 
+const PaymentUpdateSchema = z.object({
+  amount: z.number().min(0).optional(),
+  payment_date: z.coerce.date().optional(),
+  notes: z.string().nullable().optional(),
+});
+
 const parsePaymentListQuery = createRestQueryParser({
   allowedSortFields: [
     "payment_date",
@@ -28,10 +34,15 @@ const parsePaymentListQuery = createRestQueryParser({
 });
 
 type PaymentListQuery = ReturnType<typeof parsePaymentListQuery>;
+type PaymentCreateInput = z.infer<typeof PaymentCreateSchema>;
+type PaymentUpdateInput = z.infer<typeof PaymentUpdateSchema>;
 
 export {
   PaymentCreateSchema,
+  PaymentUpdateSchema,
   parsePaymentListQuery,
   type Payment,
+  type PaymentCreateInput,
   type PaymentListQuery,
+  type PaymentUpdateInput,
 };

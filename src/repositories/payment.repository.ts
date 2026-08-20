@@ -6,6 +6,7 @@ import type {
   Payment,
   PaymentCreateInput,
   PaymentListQuery,
+  PaymentUpdateInput,
 } from "@/types/payment";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
@@ -70,6 +71,49 @@ export class PaymentRepository {
         amount: data.amount,
         payment_date: data.payment_date,
         notes: data.notes ?? null,
+      },
+    });
+  }
+
+  static async updatePayment(
+    paymentId: string,
+    doctorId: string,
+    data: PaymentUpdateInput,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<Payment> {
+    const payment = await tx.payment.findFirst({
+      where: {
+        id: paymentId,
+        session: {
+          doctor_id: doctorId,
+          status: { not: "DELETED" },
+        },
+      },
+      select: { session_id: true },
+    });
+
+    if (!payment) {
+      throw new NotFoundException("payment not found");
+    }
+
+    if (data.amount !== undefined) {
+      await this.ensureAmountWithinSessionBalance(
+        payment.session_id,
+        doctorId,
+        data.amount,
+        paymentId,
+        tx,
+      );
+    }
+
+    return tx.payment.update({
+      where: { id: paymentId },
+      data: {
+        ...(data.amount !== undefined && { amount: data.amount }),
+        ...(data.payment_date !== undefined && {
+          payment_date: data.payment_date,
+        }),
+        ...(data.notes !== undefined && { notes: data.notes }),
       },
     });
   }

@@ -34,6 +34,42 @@ export class SessionRepository {
     return "INPROGRESS";
   }
 
+  static async updatePaymentStatus(
+    sessionId: string,
+    doctorId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<Session["payment_status"]> {
+    const session = await tx.session.findFirst({
+      where: {
+        id: sessionId,
+        doctor_id: doctorId,
+        status: { not: "DELETED" },
+      },
+      select: { total_amount: true },
+    });
+
+    if (!session) {
+      throw new NotFoundException("session not found");
+    }
+
+    const paymentTotal = await tx.payment.aggregate({
+      where: { session_id: sessionId },
+      _sum: { amount: true },
+    });
+    const amountPaid = Number(paymentTotal._sum.amount ?? 0);
+    const paymentStatus = this.computePaymentStatus(
+      Number(session.total_amount),
+      amountPaid,
+    );
+
+    await tx.session.update({
+      where: { id: sessionId },
+      data: { payment_status: paymentStatus },
+    });
+
+    return paymentStatus;
+  }
+
   private static toSession(session: RawSessionWithPayments): Session {
     const amountPaid = session.payments.reduce(
       (sum, payment) => sum + payment.amount,
