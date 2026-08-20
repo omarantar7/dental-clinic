@@ -8,6 +8,21 @@ import type { ImageCreateInput, ImageResponse } from "@/types/images";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
 
 export class ImageService {
+  static async deletePatientImage(
+    patientId: string,
+    doctorId: string,
+    imageId: string,
+  ): Promise<void> {
+    await PatientRepository.getPatient(patientId, doctorId);
+    const image = await ImageRepository.getPatientImage(patientId, imageId);
+
+    await r2.send(
+      new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: image.url }),
+    );
+
+    await ImageRepository.deletePatientImage(patientId, imageId);
+  }
+
   static async listPatientImages(
     patientId: string,
     doctorId: string,
