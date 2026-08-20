@@ -15,6 +15,10 @@ const envSchema = z.object({
   OTP_EXPIRATION_MINUTES: z.coerce.number().default(10),
   RESEND_API_KEY: z.string(),
   RESEND_FROM_EMAIL: z.email(),
+  R2_ENDPOINT: z.url(),
+  R2_ACCESS_KEY_ID: z.string(),
+  R2_SECRET_ACCESS_KEY: z.string(),
+  R2_BUCKET_NAME: z.string(),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;
