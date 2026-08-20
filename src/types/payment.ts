@@ -1,3 +1,4 @@
+import z from "zod";
 import { createRestQueryParser } from "@/lib/helpers/rest-query";
 
 type Payment = {
@@ -9,6 +10,12 @@ type Payment = {
   created_at: Date;
   updated_at: Date;
 };
+
+const PaymentCreateSchema = z.object({
+  amount: z.number().min(0),
+  payment_date: z.coerce.date(),
+  notes: z.string().optional(),
+});
 
 const parsePaymentListQuery = createRestQueryParser({
   allowedSortFields: [
@@ -23,6 +30,7 @@ const parsePaymentListQuery = createRestQueryParser({
 type PaymentListQuery = ReturnType<typeof parsePaymentListQuery>;
 
 export {
+  PaymentCreateSchema,
   parsePaymentListQuery,
   type Payment,
   type PaymentListQuery,
