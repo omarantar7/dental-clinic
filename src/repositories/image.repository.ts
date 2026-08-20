@@ -47,4 +47,15 @@ export class ImageRepository {
       },
     });
   }
+
+  static async createSessionImage(sessionId: string, data: ImageWithUrl) {
+    return prisma.image.create({
+      data: {
+        owner_type: "SESSION",
+        owner_id: sessionId,
+        title: data.title,
+        url: data.url,
+      },
+    });
+  }
 }
