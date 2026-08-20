@@ -8,6 +8,22 @@ import type { ImageCreateInput, ImageResponse } from "@/types/images";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
 
 export class ImageService {
+  static async listPatientImages(
+    patientId: string,
+    doctorId: string,
+  ): Promise<ImageResponse[]> {
+    await PatientRepository.getPatient(patientId, doctorId);
+
+    const images = await ImageRepository.listPatientImages(patientId);
+
+    return Promise.all(
+      images.map(async (image) => ({
+        ...image,
+        url: await getSignedImageUrl(image.url),
+      })),
+    );
+  }
+
   static async createPatientImage(
     patientId: string,
     doctorId: string,
