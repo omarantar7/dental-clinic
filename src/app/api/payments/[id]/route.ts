@@ -46,3 +46,24 @@ export async function PATCH(
     return handleApiError(error);
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireAuth(request, {
+    roles: ["DOCTOR", "SECRETARY"],
+    resolveDoctorId: true,
+  });
+  if (auth instanceof NextResponse) return auth;
+
+  try {
+    await AuthorizationService.requirePermission(auth, "EDIT_PAYMENT");
+
+    const { id } = await params;
+    await PaymentService.deletePayment(id, auth.doctorId!);
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

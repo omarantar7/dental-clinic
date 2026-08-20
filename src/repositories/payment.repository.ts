@@ -46,7 +46,9 @@ export class PaymentRepository {
 
     if (amount > amountOwed) {
       throw new BadRequestException(
-        `Payment amount cannot exceed the session balance of ${amountOwed}.`,
+        amountOwed === 0
+          ? "This session is already fully paid. No additional payment is required."
+          : `Payment amount cannot exceed the session balance of ${amountOwed}.`,
       );
     }
   }
@@ -116,6 +118,30 @@ export class PaymentRepository {
         ...(data.notes !== undefined && { notes: data.notes }),
       },
     });
+  }
+
+  static async deletePayment(
+    paymentId: string,
+    doctorId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<{ session_id: string }> {
+    const payment = await tx.payment.findFirst({
+      where: {
+        id: paymentId,
+        session: {
+          doctor_id: doctorId,
+          status: { not: "DELETED" },
+        },
+      },
+      select: { session_id: true },
+    });
+
+    if (!payment) {
+      throw new NotFoundException("payment not found");
+    }
+
+    await tx.payment.delete({ where: { id: paymentId } });
+    return { session_id: payment.session_id };
   }
 
   static async listBySessionId(
