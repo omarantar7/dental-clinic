@@ -3,6 +3,30 @@ import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import type { ImageWithUrl } from "@/types/images";
 
 export class ImageRepository {
+  static async getSessionImage(sessionId: string, imageId: string) {
+    const image = await prisma.image.findFirst({
+      where: {
+        id: imageId,
+        owner_type: "SESSION",
+        owner_id: sessionId,
+      },
+    });
+
+    if (!image) {
+      throw new NotFoundException("image not found");
+    }
+
+    return image;
+  }
+
+  static async deleteSessionImage(sessionId: string, imageId: string) {
+    await this.getSessionImage(sessionId, imageId);
+
+    return prisma.image.delete({
+      where: { id: imageId },
+    });
+  }
+
   static async getPatientImage(patientId: string, imageId: string) {
     const image = await prisma.image.findFirst({
       where: {
