@@ -74,6 +74,53 @@ export class ImageService {
     }
   }
 
+  private static async updateOwnedImage(
+    ownerId: string,
+    keyPrefix: "patients" | "sessions",
+    imageId: string,
+    data: ImageUpdateInput,
+    getCurrentImage: () => Promise<{ url: string }>,
+    updateImage: (
+      data: Pick<ImageUpdateInput, "title"> & { url?: string },
+    ) => Promise<ImageResponse>,
+  ): Promise<ImageResponse> {
+    const currentImage = await getCurrentImage();
+    let newKey: string | undefined;
+    let imageUpdated = false;
+
+    try {
+      if (data.file) {
+        newKey = await this.uploadFile(ownerId, keyPrefix, data.file);
+      }
+
+      const nextUrl = newKey
+        ? await getSignedImageUrl(newKey)
+        : await getSignedImageUrl(currentImage.url);
+      const image = await updateImage({ title: data.title, url: newKey });
+      imageUpdated = true;
+
+      if (newKey) {
+        await r2.send(
+          new DeleteObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: currentImage.url,
+          }),
+        );
+      }
+
+      return { ...image, url: nextUrl };
+    } catch (error) {
+      if (newKey && !imageUpdated) {
+        await r2
+          .send(
+            new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: newKey }),
+          )
+          .catch(() => undefined);
+      }
+      throw error;
+    }
+  }
+
   static async createSessionImage(
     sessionId: string,
     doctorId: string,
@@ -124,6 +171,25 @@ export class ImageService {
     await ImageRepository.deleteSessionImage(sessionId, imageId);
   }
 
+  static async updateSessionImage(
+    sessionId: string,
+    doctorId: string,
+    imageId: string,
+    data: ImageUpdateInput,
+  ): Promise<ImageResponse> {
+    await SessionRepository.getSessionById(sessionId, doctorId);
+
+    return this.updateOwnedImage(
+      sessionId,
+      "sessions",
+      imageId,
+      data,
+      () => ImageRepository.getSessionImage(sessionId, imageId),
+      (updateData) =>
+        ImageRepository.updateImage("SESSION", sessionId, imageId, updateData),
+    );
+  }
+
   static async deletePatientImage(
     patientId: string,
     doctorId: string,
@@ -146,57 +212,16 @@ export class ImageService {
     data: ImageUpdateInput,
   ): Promise<ImageResponse> {
     await PatientRepository.getPatient(patientId, doctorId);
-    const currentImage = await ImageRepository.getPatientImage(
+
+    return this.updateOwnedImage(
       patientId,
+      "patients",
       imageId,
+      data,
+      () => ImageRepository.getPatientImage(patientId, imageId),
+      (updateData) =>
+        ImageRepository.updateImage("PATIENT", patientId, imageId, updateData),
     );
-
-    let newKey: string | undefined;
-    let imageUpdated = false;
-
-    try {
-      if (data.file) {
-        newKey = await this.uploadFile(
-          patientId,
-          "patients",
-          data.file,
-        );
-      }
-
-      const nextUrl = newKey
-        ? await getSignedImageUrl(newKey)
-        : await getSignedImageUrl(currentImage.url);
-
-      const image = await ImageRepository.updatePatientImage(
-        patientId,
-        imageId,
-        {
-          title: data.title,
-          url: newKey,
-        },
-      );
-      imageUpdated = true;
-
-      if (newKey) {
-        await r2.send(
-          new DeleteObjectCommand({
-            Bucket: R2_BUCKET_NAME,
-            Key: currentImage.url,
-          }),
-        );
-      }
-
-      return { ...image, url: nextUrl };
-    } catch (error) {
-      if (newKey && !imageUpdated) {
-        await r2
-          .send(
-            new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: newKey }),
-          )
-          .catch(() => undefined);
-      }
-      throw error;
-    }
   }
 
   static async listPatientImages(
