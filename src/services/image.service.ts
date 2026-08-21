@@ -88,6 +88,21 @@ export class ImageService {
     );
   }
 
+  static async deleteSessionImage(
+    sessionId: string,
+    doctorId: string,
+    imageId: string,
+  ): Promise<void> {
+    await SessionRepository.getSessionById(sessionId, doctorId);
+    const image = await ImageRepository.getSessionImage(sessionId, imageId);
+
+    await r2.send(
+      new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: image.url }),
+    );
+
+    await ImageRepository.deleteSessionImage(sessionId, imageId);
+  }
+
   static async deletePatientImage(
     patientId: string,
     doctorId: string,
