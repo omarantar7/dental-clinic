@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
-import type { ImageWithUrl } from "@/types/images";
+import type { ImageUpdateInput, ImageWithUrl } from "@/types/images";
 
 export class ImageRepository {
   static async getSessionImage(sessionId: string, imageId: string) {
@@ -48,6 +48,22 @@ export class ImageRepository {
 
     return prisma.image.delete({
       where: { id: imageId },
+    });
+  }
+
+  static async updatePatientImage(
+    patientId: string,
+    imageId: string,
+    data: Pick<ImageUpdateInput, "title"> & { url?: string },
+  ) {
+    await this.getPatientImage(patientId, imageId);
+
+    return prisma.image.update({
+      where: { id: imageId },
+      data: {
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.url !== undefined && { url: data.url }),
+      },
     });
   }
 
