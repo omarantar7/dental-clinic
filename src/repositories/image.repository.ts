@@ -51,12 +51,19 @@ export class ImageRepository {
     });
   }
 
-  static async updatePatientImage(
-    patientId: string,
+  static async updateImage(
+    ownerType: "PATIENT" | "SESSION",
+    ownerId: string,
     imageId: string,
     data: Pick<ImageUpdateInput, "title"> & { url?: string },
   ) {
-    await this.getPatientImage(patientId, imageId);
+    const image = await prisma.image.findFirst({
+      where: { id: imageId, owner_type: ownerType, owner_id: ownerId },
+    });
+
+    if (!image) {
+      throw new NotFoundException("image not found");
+    }
 
     return prisma.image.update({
       where: { id: imageId },
@@ -65,6 +72,14 @@ export class ImageRepository {
         ...(data.url !== undefined && { url: data.url }),
       },
     });
+  }
+
+  static async updatePatientImage(
+    patientId: string,
+    imageId: string,
+    data: Pick<ImageUpdateInput, "title"> & { url?: string },
+  ) {
+    return this.updateImage("PATIENT", patientId, imageId, data);
   }
 
   static async listPatientImages(patientId: string) {
