@@ -5,29 +5,30 @@ import { PatientRepository } from "@/repositories/patient.repository";
 import { SessionRepository } from "@/repositories/session.repository";
 import { convertImageToWebp } from "@/lib/helpers/image";
 import { getSignedImageUrl, r2, R2_BUCKET_NAME } from "@/lib/r2";
-import type { ImageCreateInput, ImageResponse } from "@/types/images";
+import type {
+  ImageCreateInput,
+  ImageResponse,
+  ImageUpdateInput,
+} from "@/types/images";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
 
 export class ImageService {
-  private static async uploadImage(
+  private static async uploadFile(
     ownerId: string,
     keyPrefix: "patients" | "sessions",
-    data: ImageCreateInput,
-    persistImage: (key: string) => Promise<ImageResponse>,
-  ): Promise<ImageResponse> {
-    let key: string | undefined;
+    file: File,
+  ): Promise<string> {
+    const key = `${keyPrefix}/${ownerId}/${randomUUID()}.webp`;
 
     try {
       let webpBuffer: Buffer;
       try {
-        webpBuffer = await convertImageToWebp(data.file);
+        webpBuffer = await convertImageToWebp(file);
       } catch (error) {
         throw new BadRequestException("file must be a valid image", {
           cause: error,
         });
       }
-
-      key = `${keyPrefix}/${ownerId}/${randomUUID()}.webp`;
 
       await r2.send(
         new PutObjectCommand({
@@ -37,6 +38,26 @@ export class ImageService {
           ContentType: "image/webp",
         }),
       );
+
+      return key;
+    } catch (error) {
+      await r2
+        .send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }))
+        .catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private static async uploadImage(
+    ownerId: string,
+    keyPrefix: "patients" | "sessions",
+    data: ImageCreateInput,
+    persistImage: (key: string) => Promise<ImageResponse>,
+  ): Promise<ImageResponse> {
+    let key: string | undefined;
+
+    try {
+      key = await this.uploadFile(ownerId, keyPrefix, data.file);
 
       const image = await persistImage(key);
 
@@ -116,6 +137,66 @@ export class ImageService {
     );
 
     await ImageRepository.deletePatientImage(patientId, imageId);
+  }
+
+  static async updatePatientImage(
+    patientId: string,
+    doctorId: string,
+    imageId: string,
+    data: ImageUpdateInput,
+  ): Promise<ImageResponse> {
+    await PatientRepository.getPatient(patientId, doctorId);
+    const currentImage = await ImageRepository.getPatientImage(
+      patientId,
+      imageId,
+    );
+
+    let newKey: string | undefined;
+    let imageUpdated = false;
+
+    try {
+      if (data.file) {
+        newKey = await this.uploadFile(
+          patientId,
+          "patients",
+          data.file,
+        );
+      }
+
+      const nextUrl = newKey
+        ? await getSignedImageUrl(newKey)
+        : await getSignedImageUrl(currentImage.url);
+
+      const image = await ImageRepository.updatePatientImage(
+        patientId,
+        imageId,
+        {
+          title: data.title,
+          url: newKey,
+        },
+      );
+      imageUpdated = true;
+
+      if (newKey) {
+        await r2.send(
+          new DeleteObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: currentImage.url,
+          }),
+        );
+      }
+
+      return { ...image, url: nextUrl };
+    } catch (error) {
+      if (newKey && !imageUpdated) {
+        await r2
+          .send(
+            new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: newKey }),
+          )
+          .catch(() => undefined);
+      }
+      throw error;
+    }
   }
 
   static async listPatientImages(
