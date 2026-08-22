@@ -107,6 +107,12 @@ export class SecretaryService {
     });
   }
 
+  static async deleteSecretary(id: string, doctorId: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      await SecretaryRepository.deleteSecretary(id, doctorId, tx);
+    });
+  }
+
   static async getSecretaryProfile(userId: string) {
     return SecretaryRepository.getSecretaryByUserId(userId);
   }

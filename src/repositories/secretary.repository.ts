@@ -232,11 +232,27 @@ export class SecretaryRepository {
 
   static async deleteSecretary(
     id: string,
+    doctorId: string,
     tx: PrismaClientOrTx = prisma,
   ): Promise<void> {
     try {
-      await tx.secretary.delete({ where: { id } });
+      const secretary = await tx.secretary.findFirst({
+        where: { id, doctor_id: doctorId },
+        select: { user_id: true },
+      });
+      if (!secretary) throw new NotFoundException("secretary not found");
+
+      const updatedAt = new Date();
+      await tx.user.update({
+        where: { id: secretary.user_id },
+        data: { status: "DELETED", updated_at: updatedAt },
+      });
+      await tx.secretary.update({
+        where: { id },
+        data: { updated_at: updatedAt },
+      });
     } catch (error: any) {
+      if (error instanceof NotFoundException) throw error;
       if (error.code === "P2025")
         throw new NotFoundException("secretary not found");
       throw new Error("Failed to delete secretary", { cause: error });
