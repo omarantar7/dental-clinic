@@ -147,16 +147,83 @@ export class SecretaryRepository {
 
   static async updateSecretary(
     id: string,
-    data: Partial<Pick<Secretary, "doctor_id" | "role_id">>,
+    doctorId: string,
+    data: {
+      role_id?: string | null;
+      phone_number?: string;
+      full_name?: string | null;
+      status?: "ENABLED" | "DISABLED" | "DELETED";
+    },
     tx: PrismaClientOrTx = prisma,
-  ): Promise<IdentifiableSecretary> {
+  ): Promise<SecretaryListItem> {
     try {
-      const secretary = await tx.secretary.update({
-        where: { id },
-        data: { ...data, updated_at: new Date() },
+      const secretary = await tx.secretary.findFirst({
+        where: { id, doctor_id: doctorId },
+        select: { user_id: true },
       });
-      return this.toIdentifiableSecretary(secretary);
+      if (!secretary) throw new NotFoundException("secretary not found");
+
+      const updatedAt = new Date();
+      await tx.secretary.update({
+        where: { id },
+        data: {
+          ...(data.role_id !== undefined ? { role_id: data.role_id } : {}),
+          updated_at: updatedAt,
+        },
+      });
+      await tx.user.update({
+        where: { id: secretary.user_id },
+        data: {
+          ...(data.phone_number !== undefined
+            ? { phone_number: data.phone_number }
+            : {}),
+          ...(data.full_name !== undefined
+            ? { full_name: data.full_name }
+            : {}),
+          ...(data.status !== undefined ? { status: data.status } : {}),
+          updated_at: updatedAt,
+        },
+      });
+
+      const updatedSecretary = await tx.secretary.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          user_id: true,
+          doctor_id: true,
+          role_id: true,
+          hired_at: true,
+          created_at: true,
+          updated_at: true,
+          user: {
+            select: {
+              email: true,
+              phone_number: true,
+              status: true,
+              full_name: true,
+            },
+          },
+          role: { select: { name: true } },
+        },
+      });
+
+      if (!updatedSecretary) throw new NotFoundException("secretary not found");
+
+      return {
+        id: updatedSecretary.id,
+        user_id: updatedSecretary.user_id,
+        role_id: updatedSecretary.role_id,
+        role_name: updatedSecretary.role?.name ?? null,
+        email: updatedSecretary.user.email,
+        phone_number: updatedSecretary.user.phone_number,
+        full_name: updatedSecretary.user.full_name,
+        status: updatedSecretary.user.status,
+        hired_at: updatedSecretary.hired_at,
+        created_at: updatedSecretary.created_at,
+        updated_at: updatedSecretary.updated_at,
+      };
     } catch (error: any) {
+      if (error instanceof NotFoundException) throw error;
       if (error.code === "P2025")
         throw new NotFoundException("secretary not found");
       throw new Error("Failed to update secretary", { cause: error });

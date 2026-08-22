@@ -34,6 +34,19 @@ const SecretaryCreateSchema = z.object({
   role_id: z.string().nullable().optional(),
 });
 
+const SecretaryUpdateSchema = z
+  .object({
+    role_id: z.string().nullable().optional(),
+    phone_number: z.string().min(1).optional(),
+    full_name: z.string().min(3).max(30).nullable().optional(),
+    status: z.enum(["ENABLED", "DISABLED", "DELETED"]).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided",
+  });
+
+type SecretaryUpdateInput = z.infer<typeof SecretaryUpdateSchema>;
+
 type SecretaryCreateInput = z.infer<typeof SecretaryCreateSchema>;
 
 type Secretary = z.infer<typeof SecretaryValidationSchema>;
@@ -69,11 +82,13 @@ export {
   parseSecretaryListQuery,
   SecretaryValidationSchema,
   SecretaryCreateSchema,
+  SecretaryUpdateSchema,
   RegisterSecretarySchema,
   type Secretary,
   type IdentifiableSecretary,
   type SecretaryListItem,
   type SecretaryResponse,
   type SecretaryCreateInput,
+  type SecretaryUpdateInput,
   type RegisterSecretaryInput,
 };

@@ -9,6 +9,7 @@ import { secretaryInvitationTemplate } from "@/services/email-templates/secretar
 import type {
   SecretaryCreateInput,
   SecretaryResponse,
+  SecretaryUpdateInput,
 } from "@/types/secertary";
 
 export class SecretaryService {
@@ -86,6 +87,24 @@ export class SecretaryService {
     });
 
     return secretary;
+  }
+
+  static async updateSecretary(
+    id: string,
+    doctorId: string,
+    data: SecretaryUpdateInput,
+  ): Promise<SecretaryResponse> {
+    return prisma.$transaction(async (tx) => {
+      if (data.role_id) {
+        const role = await tx.role.findFirst({
+          where: { id: data.role_id, doctor_id: doctorId },
+          select: { id: true },
+        });
+        if (!role) throw new BadRequestException("role does not belong to doctor");
+      }
+
+      return SecretaryRepository.updateSecretary(id, doctorId, data, tx);
+    });
   }
 
   static async getSecretaryProfile(userId: string) {
