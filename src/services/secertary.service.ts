@@ -10,6 +10,13 @@ import type {
 } from "@/types/secertary";
 
 export class SecretaryService {
+  static async listSecretaries(
+    doctorId: string,
+    query: Parameters<typeof SecretaryRepository.listSecretariesByDoctorId>[1],
+  ) {
+    return SecretaryRepository.listSecretariesByDoctorId(doctorId, query);
+  }
+
   static async createSecretary(
     data: RegisterSecretaryInput,
   ): Promise<{ user: SafeUser; secretary: IdentifiableSecretary }> {

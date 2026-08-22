@@ -1,9 +1,31 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
-import type { IdentifiableSecretary, Secretary } from "@/types/secertary";
+import type {
+  IdentifiableSecretary,
+  Secretary,
+  SecretaryListItem,
+} from "@/types/secertary";
+import type { ParsedListQuery } from "@/lib/helpers/query-parser";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
+
+function nestUserSearchWhere(where: Record<string, any>): Record<string, any> {
+  const { AND, OR, ...fields } = where;
+  const nestedFields = Object.fromEntries(
+    Object.entries(fields).map(([field, condition]) => [field, condition]),
+  );
+
+  return {
+    ...nestedFields,
+    ...(Array.isArray(AND)
+      ? { AND: AND.map((condition) => nestUserSearchWhere(condition)) }
+      : {}),
+    ...(Array.isArray(OR)
+      ? { OR: OR.map((condition) => nestUserSearchWhere(condition)) }
+      : {}),
+  };
+}
 
 export class SecretaryRepository {
   static async createSecretary(
@@ -46,13 +68,75 @@ export class SecretaryRepository {
 
   static async listSecretariesByDoctorId(
     doctorId: string,
+    query: ParsedListQuery,
     tx: PrismaClientOrTx = prisma,
-  ): Promise<IdentifiableSecretary[]> {
-    const secretaries = await tx.secretary.findMany({
-      where: { doctor_id: doctorId },
-      orderBy: { created_at: "desc" },
-    });
-    return secretaries.map((s) => this.toIdentifiableSecretary(s));
+  ): Promise<{
+    data: SecretaryListItem[];
+    page: number;
+    limit: number;
+    total: number;
+  }> {
+    const { page, limit, sortBy, sortOrder, where: searchWhere } = query;
+    const where = {
+      doctor_id: doctorId,
+      user: {
+        AND: [
+          { status: { not: "DELETED" as const } },
+          nestUserSearchWhere(searchWhere),
+        ],
+      },
+    };
+
+    const orderBy = ["email", "phone_number"].includes(sortBy)
+      ? { user: { [sortBy]: sortOrder } }
+      : { [sortBy]: sortOrder };
+
+    const [secretaries, total] = await Promise.all([
+      tx.secretary.findMany({
+        where,
+        select: {
+          id: true,
+          user_id: true,
+          doctor_id: true,
+          role_id: true,
+          hired_at: true,
+          created_at: true,
+          updated_at: true,
+          user: {
+            select: {
+              email: true,
+              phone_number: true,
+              status: true,
+              full_name: true,
+            },
+          },
+          role: { select: { name: true } },
+        },
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      tx.secretary.count({ where }),
+    ]);
+
+    return {
+      data: secretaries.map((secretary) => ({
+        id: secretary.id,
+        user_id: secretary.user_id,
+        role_id: secretary.role_id,
+        full_name: secretary.user.full_name ?? null,
+        role_name: secretary.role?.name ?? null,
+        email: secretary.user.email,
+        phone_number: secretary.user.phone_number,
+        status: secretary.user.status,
+        hired_at: secretary.hired_at,
+        created_at: secretary.created_at,
+        updated_at: secretary.updated_at,
+      })),
+      page,
+      limit,
+      total,
+    };
   }
 
   static async updateSecretary(
