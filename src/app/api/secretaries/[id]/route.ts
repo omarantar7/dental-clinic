@@ -45,3 +45,23 @@ export async function PATCH(
     return handleApiError(error);
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireAuth(request, {
+    roles: ["DOCTOR"],
+    resolveDoctorId: true,
+  });
+  if (auth instanceof NextResponse) return auth;
+
+  const { id } = await params;
+
+  try {
+    await SecretaryService.deleteSecretary(id, auth.doctorId!);
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
