@@ -3,6 +3,7 @@ import { UserRepository } from "@/repositories/user.repository";
 import { PasswordResetRepository } from "@/repositories/passwordReset.repository";
 import config from "@/config";
 import { EmailService } from "./email.service";
+import { passwordResetTemplate } from "@/services/email-templates/password-reset.template";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
 import { InvalidOtpException } from "@/exceptions/http/InvalidOtpException";
 import bcrypt from "bcrypt";
@@ -24,9 +25,12 @@ export class PasswordResetService {
         expiresAt,
       );
 
-    await EmailService.sendPasswordResetOtp(
+    await EmailService.sendEmail(
       user.email,
-      resetPasswordRecord.otp,
+      passwordResetTemplate(
+        resetPasswordRecord.otp,
+        config.auth.otpExpirationMinutes,
+      ),
     );
   }
 
