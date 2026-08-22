@@ -1,19 +1,30 @@
 import { Resend } from "resend";
 import env from "@/config/env";
+import {
+  passwordResetTemplate,
+} from "@/services/email-templates/password-reset.template";
+import type { EmailTemplate } from "@/services/email-templates/types";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
 export class EmailService {
-  static async sendPasswordResetOtp(to: string, otp: string): Promise<void> {
+  static async sendEmail(to: string, template: EmailTemplate): Promise<void> {
     const { error } = await resend.emails.send({
       from: env.RESEND_FROM_EMAIL,
       to,
-      subject: "Your password reset code",
-      html: `<p>Your password reset code is:</p><h2>${otp}</h2><p>This code expires in ${env.OTP_EXPIRATION_MINUTES ?? 10} minutes.</p>`,
+      subject: template.subject,
+      html: template.html,
     });
 
     if (error) {
-      throw new Error("Failed to send password reset email", { cause: error });
+      throw new Error("Failed to send email", { cause: error });
     }
+  }
+
+  static async sendPasswordResetOtp(to: string, otp: string): Promise<void> {
+    await this.sendEmail(
+      to,
+      passwordResetTemplate(otp, env.OTP_EXPIRATION_MINUTES ?? 10),
+    );
   }
 }

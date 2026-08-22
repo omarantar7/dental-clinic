@@ -4,6 +4,8 @@ import { SecretaryRepository } from "@/repositories/secretary.repository";
 import { DoctorRepository } from "@/repositories/doctor.repository";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
+import { EmailService } from "@/services/email.service";
+import { secretaryInvitationTemplate } from "@/services/email-templates/secretary-invitation.template";
 import type {
   SecretaryCreateInput,
   SecretaryResponse,
@@ -21,7 +23,7 @@ export class SecretaryService {
     doctorId: string,
     data: SecretaryCreateInput,
   ): Promise<SecretaryResponse> {
-    return prisma.$transaction(async (tx) => {
+    const secretary = await prisma.$transaction(async (tx) => {
       const doctor = await DoctorRepository.getDoctor(doctorId, tx).catch(
         () => null,
       );
@@ -56,7 +58,7 @@ export class SecretaryService {
         },
         tx,
       );
-      return {
+      const response = {
         id: secretary.id,
         user_id: secretary.user_id,
         doctor_id: secretary.doctor_id,
@@ -65,12 +67,25 @@ export class SecretaryService {
         email: user.email,
         phone_number: user.phone_number,
         full_name: user.full_name,
-        status: "ENABLED",
+        status: "ENABLED" as const,
         hired_at: secretary.hired_at ?? null,
         created_at: secretary.created_at,
         updated_at: secretary.updated_at,
       };
+
+      await EmailService.sendEmail(
+        response.email,
+        secretaryInvitationTemplate({
+          fullName: response.full_name,
+          email: response.email,
+          temporaryPassword: data.password,
+        }),
+      );
+
+      return response;
     });
+
+    return secretary;
   }
 
   static async getSecretaryProfile(userId: string) {
