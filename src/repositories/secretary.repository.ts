@@ -31,17 +31,23 @@ export class SecretaryRepository {
   static async createSecretary(
     data: Secretary,
     tx: PrismaClientOrTx = prisma,
-  ): Promise<IdentifiableSecretary> {
+  ): Promise<IdentifiableSecretary & Pick<SecretaryListItem, "created_at" | "updated_at">> {
     try {
+      const createdAt = new Date();
       const secretary = await tx.secretary.create({
         data: {
           user_id: data.user_id,
           doctor_id: data.doctor_id,
-          hired_at: data.hired_at ?? new Date(),
+          hired_at: data.hired_at ?? createdAt,
+          created_at: createdAt,
           role_id: data.role_id ?? null,
         },
       });
-      return this.toIdentifiableSecretary(secretary);
+      return {
+        ...this.toIdentifiableSecretary(secretary),
+        created_at: secretary.created_at,
+        updated_at: secretary.updated_at,
+      };
     } catch (error: any) {
       throw new Error("Failed to create secretary", { cause: error });
     }
