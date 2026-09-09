@@ -11,10 +11,11 @@ export class PasswordResetRepository {
     expiresAt: Date,
     tx: PrismaClientOrTx = prisma,
   ): Promise<{ otp: string; id: string }> {
-    const otp = otpGenerator.generate(4, {
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
       upperCaseAlphabets: false,
       specialChars: false,
-      digits: true,
     });
 
     const otpHash = await bcrypt.hash(otp, 10);
