@@ -6,7 +6,7 @@ const RequestPasswordResetSchema = z.object({
 
 const VerifyOtpSchema = z.object({
   email: z.email(),
-  otp_code: z.string().length(4),
+  otp_code: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
 });
 
 const ConfirmNewPasswordSchema = z.object({
