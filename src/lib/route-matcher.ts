@@ -1,3 +1,3 @@
 export function matchesRoute(path: string, routes: string[]): boolean {
-  return routes.some((route) => path.startsWith(route));
+  return routes.some((route) => path === route || path.startsWith(`${route}/`));
 }
