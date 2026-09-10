@@ -14,7 +14,7 @@ export default function AuthLayout({
             <Image src="/dentalLogo.png" alt="" width={24} height={24} />
 
             <span className="text-sm font-semibold tracking-wide text-foreground">
-              BRIGHT SMILE
+              Dental Clinic
             </span>
           </div>
 
