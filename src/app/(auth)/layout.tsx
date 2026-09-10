@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
 
 export default function AuthLayout({
   children,
@@ -11,7 +11,8 @@ export default function AuthLayout({
         <div className="relative hidden min-h-150 lg:block  bg-[linear-gradient(to_bottom,rgba(0,0,0,0.5),rgba(0,0,0,0.8)),url('https://thearchitectsdiary.com/wp-content/uploads/2024/12/modern-dental-clinic-2.jpg')] bg-cover bg-center">
 
           <div className="absolute left-6 top-6 flex items-center gap-2 rounded-full bg-background/90 px-4 py-2 backdrop-blur-sm">
-            <Sparkles className="h-4 w-4 text-primary" />
+            <Image src="/dentalLogo.png" alt="" width={24} height={24} />
+
             <span className="text-sm font-semibold tracking-wide text-foreground">
               BRIGHT SMILE
             </span>
