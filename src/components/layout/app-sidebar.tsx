@@ -83,8 +83,8 @@ function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" side={isMobile ? "right" : "left"}>
-      <SidebarHeader className="flex-row items-center justify-between py-6 md:pb-10">
-        <div className="flex items-center gap-2 overflow-hidden px-2 group-data-[collapsible=icon]:hidden">
+      <SidebarHeader className="flex-row items-center justify-between py-6 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-3 md:pb-10">
+        <div className="flex items-center gap-2 overflow-hidden px-2">
           <Image
             src="/dentalLogo.png"
             alt=""
@@ -92,7 +92,9 @@ function AppSidebar() {
             height={24}
             className="shrink-0"
           />
-          <span className="truncate text-sm font-semibold">Dental Clinic</span>
+          <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
+            Dental Clinic
+          </span>
         </div>
         {isMobile ? (
           <Button variant="ghost" size="icon-lg" onClick={toggleSidebar}>
