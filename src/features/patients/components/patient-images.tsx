@@ -14,34 +14,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { PatientImageFormDialog } from "@/features/patients/components/patient-image-form-dialog";
 import { useDeletePatientImage } from "@/features/patients/hooks/use-delete-patient-image";
 import { usePatientImages } from "@/features/patients/hooks/use-patient-images";
+import type { DialogState } from "@/types/dialog-state";
 import type { ImageResponse } from "@/types/images";
-
-type DialogState =
-  | { mode: "create" }
-  | { mode: "edit"; image: ImageResponse }
-  | null;
 
 function PatientImages({ patientId }: { patientId: string }) {
   const { images, isLoading, refetch } = usePatientImages(patientId);
-  const [dialogState, setDialogState] = useState<DialogState>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ImageResponse | null>(
-    null,
-  );
-  const [previewImage, setPreviewImage] = useState<ImageResponse | null>(
-    null,
-  );
+  const [dialogState, setDialogState] =
+    useState<DialogState<ImageResponse>>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ImageResponse | null>(null);
+  const [previewImage, setPreviewImage] = useState<ImageResponse | null>(null);
   const { deleteImage, isLoading: isDeleting } = useDeletePatientImage(
     patientId,
     () => {
@@ -90,7 +78,7 @@ function PatientImages({ patientId }: { patientId: string }) {
                       variant="secondary"
                       size="icon-xs"
                       onClick={() =>
-                        setDialogState({ mode: "edit", image })
+                        setDialogState({ mode: "edit", data: image })
                       }
                     >
                       <Pencil />
@@ -119,7 +107,7 @@ function PatientImages({ patientId }: { patientId: string }) {
         <PatientImageFormDialog
           patientId={patientId}
           mode={dialogState.mode}
-          image={dialogState.mode === "edit" ? dialogState.image : undefined}
+          image={dialogState.mode === "edit" ? dialogState.data : undefined}
           open
           onOpenChange={(open) => !open && setDialogState(null)}
           onSuccess={refetch}
