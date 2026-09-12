@@ -20,13 +20,9 @@ import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { useRestQuery } from "@/hooks/use-rest-query";
 import { PatientFormDialog } from "@/features/patients/components/patient-form-dialog";
 import { useDeletePatient } from "@/features/patients/hooks/use-delete-patient";
+import type { DialogState } from "@/types/dialog-state";
 import type { PatientListItem } from "@/types/patient";
 import { columns } from "../types/patient-columns";
-
-type DialogState =
-  | { mode: "create" }
-  | { mode: "edit"; patientId: string }
-  | null;
 
 function PatientsTable() {
   const {
@@ -47,7 +43,7 @@ function PatientsTable() {
     perPage: 10,
   });
 
-  const [dialogState, setDialogState] = useState<DialogState>(null);
+  const [dialogState, setDialogState] = useState<DialogState<string>>(null);
   const [deleteTarget, setDeleteTarget] = useState<PatientListItem | null>(
     null,
   );
@@ -92,7 +88,7 @@ function PatientsTable() {
               variant="ghost"
               size="icon-sm"
               onClick={() =>
-                setDialogState({ mode: "edit", patientId: row.id })
+                setDialogState({ mode: "edit", data: row.id })
               }
             >
               <Pencil />
@@ -121,7 +117,7 @@ function PatientsTable() {
         <PatientFormDialog
           mode={dialogState.mode}
           patientId={
-            dialogState.mode === "edit" ? dialogState.patientId : undefined
+            dialogState.mode === "edit" ? dialogState.data : undefined
           }
           open
           onOpenChange={(open) => !open && setDialogState(null)}
