@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuthService } from "./services/auth.service";
 import { AuthResolver } from "./lib/auth-resolver";
-import { matchesRoute } from "./lib/route-matcher";
+import { matchesRoute } from "./utils/route-matcher";
 import {
   unauthorized,
   redirectAuthenticatedAwayFromPublic,
