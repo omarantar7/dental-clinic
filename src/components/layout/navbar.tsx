@@ -31,7 +31,7 @@ function Navbar() {
         <span className="text-sm font-semibold">BRIGHT SMILE</span>
       </div>
       <MobileSidebarTrigger />
-      <div className="ml-auto hidden md:flex">
+      <div className="ml-auto hidden items-center gap-2 md:flex">
         <ProfileMenu />
       </div>
     </header>
