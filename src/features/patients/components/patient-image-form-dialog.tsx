@@ -10,17 +10,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { useImageForm } from "@/features/patients/hooks/use-image-form";
-import type { ImageResponse } from "@/types/images";
-
-interface PatientImageFormDialogProps {
-  patientId: string;
-  mode: "create" | "edit";
-  image?: ImageResponse;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-}
+import { useImageForm } from "@/hooks/use-image-form";
+import type { PatientImageFormDialogProps } from "../types/patient-props";
 
 function PatientImageFormDialog({
   patientId,
@@ -31,7 +22,7 @@ function PatientImageFormDialog({
   onSuccess,
 }: PatientImageFormDialogProps) {
   const { form, onSubmit, isLoading, error } = useImageForm({
-    patientId,
+    basePath: `/api/patients/${patientId}/images`,
     mode,
     image,
     onSuccess: () => {
