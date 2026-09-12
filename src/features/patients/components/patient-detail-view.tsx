@@ -14,6 +14,7 @@ import { Text } from "@/components/ui/text";
 import { PatientFormDialog } from "@/features/patients/components/patient-form-dialog";
 import { PatientImages } from "@/features/patients/components/patient-images";
 import { usePatientDetail } from "@/features/patients/hooks/use-patient-detail";
+import { PatientSessions } from "@/features/sessions/components/patient-sessions";
 import { formatCurrency, formatDate } from "@/utils/format";
 
 function BalanceBadge({
@@ -140,6 +141,8 @@ function PatientDetailView({ patientId }: { patientId: string }) {
           </CardContent>
         </Card>
       </div>
+
+      <PatientSessions patientId={patient.id} />
 
       <PatientImages patientId={patient.id} />
 
