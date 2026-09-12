@@ -21,14 +21,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { usePatientForm } from "@/features/patients/hooks/use-patient-form";
-
-interface PatientFormDialogProps {
-  mode: "create" | "edit";
-  patientId?: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-}
+import type { PatientFormDialogProps } from "../types/patient-props";
 
 function PatientFormDialog({
   mode,

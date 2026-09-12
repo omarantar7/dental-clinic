@@ -12,14 +12,14 @@ interface ImageFormValues {
 }
 
 interface UseImageFormOptions {
-  patientId: string;
+  basePath: string;
   mode: "create" | "edit";
   image?: ImageResponse;
   onSuccess: () => void;
 }
 
 function useImageForm({
-  patientId,
+  basePath,
   mode,
   image,
   onSuccess,
@@ -35,10 +35,7 @@ function useImageForm({
     if (data.title) formData.append("title", data.title);
     if (data.file?.[0]) formData.append("file", data.file[0]);
 
-    const url =
-      mode === "create"
-        ? `/api/patients/${patientId}/images`
-        : `/api/patients/${patientId}/images/${image?.id}`;
+    const url = mode === "create" ? basePath : `${basePath}/${image?.id}`;
     const method = mode === "create" ? "POST" : "PATCH";
 
     const result = await request(method, url, formData);
@@ -51,4 +48,4 @@ function useImageForm({
   return { form, onSubmit, isLoading, error };
 }
 
-export { useImageForm };
+export { useImageForm, type ImageFormValues, type UseImageFormOptions };
