@@ -77,8 +77,8 @@ export class AuthService {
     this.setRefreshTokenIntoCookie(res, refreshToken);
   }
 
-  getAuthUser(request: NextRequest): TokenUserPayload | null {
-    const raw = request.headers.get("user-payload");
+  getAuthUser(headers: Pick<Headers, "get">): TokenUserPayload | null {
+    const raw = headers.get("user-payload");
     if (!raw) return null;
     try {
       return JSON.parse(raw) as TokenUserPayload;

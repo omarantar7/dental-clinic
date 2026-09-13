@@ -14,7 +14,7 @@ export async function requireAuth(
   request: NextRequest,
   options: { roles?: Role[]; resolveDoctorId?: boolean } = {},
 ): Promise<AuthContext | NextResponse> {
-  const authUser = authService.getAuthUser(request);
+  const authUser = authService.getAuthUser(request.headers);
 
   if (!authUser) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
