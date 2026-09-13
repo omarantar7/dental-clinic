@@ -47,6 +47,17 @@ const SecretaryUpdateSchema = z
 
 type SecretaryUpdateInput = z.infer<typeof SecretaryUpdateSchema>;
 
+const SecretaryUpdateProfileSchema = z
+  .object({
+    phone_number: z.string().min(1).optional(),
+    full_name: z.string().min(3).max(30).nullable().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided",
+  });
+
+type SecretaryUpdateProfileInput = z.infer<typeof SecretaryUpdateProfileSchema>;
+
 type SecretaryCreateInput = z.infer<typeof SecretaryCreateSchema>;
 
 type Secretary = z.infer<typeof SecretaryValidationSchema>;
@@ -83,6 +94,7 @@ export {
   SecretaryValidationSchema,
   SecretaryCreateSchema,
   SecretaryUpdateSchema,
+  SecretaryUpdateProfileSchema,
   RegisterSecretarySchema,
   type Secretary,
   type IdentifiableSecretary,
@@ -90,5 +102,6 @@ export {
   type SecretaryResponse,
   type SecretaryCreateInput,
   type SecretaryUpdateInput,
+  type SecretaryUpdateProfileInput,
   type RegisterSecretaryInput,
 };

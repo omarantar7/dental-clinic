@@ -72,6 +72,60 @@ export class SecretaryRepository {
     return secretary ? this.toIdentifiableSecretary(secretary) : null;
   }
 
+  static async getSecretaryProfileByUserId(
+    userId: string,
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<SecretaryListItem> {
+    const secretary = await tx.secretary.findUnique({
+      where: { user_id: userId },
+      select: {
+        id: true,
+        user_id: true,
+        role_id: true,
+        hired_at: true,
+        created_at: true,
+        updated_at: true,
+        user: {
+          select: {
+            email: true,
+            phone_number: true,
+            status: true,
+            full_name: true,
+          },
+        },
+        role: { select: { name: true } },
+      },
+    });
+    if (!secretary) throw new NotFoundException("secretary not found");
+
+    return {
+      id: secretary.id,
+      user_id: secretary.user_id,
+      role_id: secretary.role_id,
+      role_name: secretary.role?.name ?? null,
+      email: secretary.user.email,
+      phone_number: secretary.user.phone_number,
+      full_name: secretary.user.full_name,
+      status: secretary.user.status,
+      hired_at: secretary.hired_at,
+      created_at: secretary.created_at,
+      updated_at: secretary.updated_at,
+    };
+  }
+
+  static async updateSecretaryProfileByUserId(
+    userId: string,
+    data: { phone_number?: string; full_name?: string | null },
+    tx: PrismaClientOrTx = prisma,
+  ): Promise<SecretaryListItem> {
+    await tx.user.update({
+      where: { id: userId },
+      data: { ...data, updated_at: new Date() },
+    });
+
+    return this.getSecretaryProfileByUserId(userId, tx);
+  }
+
   static async listSecretariesByDoctorId(
     doctorId: string,
     query: ParsedListQuery,
