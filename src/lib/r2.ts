@@ -17,3 +17,4 @@ export async function getSignedImageUrl(key: string, expiresInSeconds = 900) {
 }
 
 export const R2_BUCKET_NAME = env.R2_BUCKET_NAME;
+export const R2_KEY_PREFIX = env.R2_KEY_PREFIX;

@@ -19,6 +19,7 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string(),
   R2_SECRET_ACCESS_KEY: z.string(),
   R2_BUCKET_NAME: z.string(),
+  R2_KEY_PREFIX: z.string().default(""),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;

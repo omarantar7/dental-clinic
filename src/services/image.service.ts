@@ -4,7 +4,7 @@ import { ImageRepository } from "@/repositories/image.repository";
 import { PatientRepository } from "@/repositories/patient.repository";
 import { SessionRepository } from "@/repositories/session.repository";
 import { convertImageToWebp } from "@/lib/helpers/image";
-import { getSignedImageUrl, r2, R2_BUCKET_NAME } from "@/lib/r2";
+import { getSignedImageUrl, r2, R2_BUCKET_NAME, R2_KEY_PREFIX } from "@/lib/r2";
 import type {
   ImageCreateInput,
   ImageResponse,
@@ -18,7 +18,7 @@ export class ImageService {
     keyPrefix: "patients" | "sessions",
     file: File,
   ): Promise<string> {
-    const key = `${keyPrefix}/${ownerId}/${randomUUID()}.webp`;
+    const key = `${R2_KEY_PREFIX ? `${R2_KEY_PREFIX}/` : ""}${keyPrefix}/${ownerId}/${randomUUID()}.webp`;
 
     try {
       let webpBuffer: Buffer;
