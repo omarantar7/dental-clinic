@@ -1,6 +1,7 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
+import { isPrismaError } from "@/lib/prisma-errors";
 import type {
   PatientCreateInput,
   PatientListItem,
@@ -152,8 +153,8 @@ export class PatientRepository {
           updated_at: new Date(),
         },
       });
-    } catch (error: any) {
-      if (error.code === "P2025") {
+    } catch (error) {
+      if (isPrismaError(error, "P2025")) {
         throw new NotFoundException("patient not found");
       }
       throw new Error("Failed to update patient", { cause: error });
@@ -172,8 +173,8 @@ export class PatientRepository {
         where: { id },
         data: { status: "DELETED", updated_at: new Date() },
       });
-    } catch (error: any) {
-      if (error.code === "P2025") {
+    } catch (error) {
+      if (isPrismaError(error, "P2025")) {
         throw new NotFoundException("patient not found");
       }
       throw new Error("Failed to delete patient", { cause: error });

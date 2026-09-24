@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       { message: "A reset code has been sent." },
       { status: 200 },
     );
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ message: "A reset code has been sent." }, { status: 200 });
   }
 }

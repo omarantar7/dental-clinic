@@ -61,7 +61,7 @@ async function main() {
     const result = await DoctorService.createDoctor(parsedData.data);
     console.log("\n✅ Doctor created successfully:");
     console.log(JSON.stringify(result, null, 2));
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof UniqueException) {
       console.error(`\n❌ ${error.message}`);
     } else {

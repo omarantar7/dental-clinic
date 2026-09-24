@@ -1,6 +1,7 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
+import { isPrismaError } from "@/lib/prisma-errors";
 import { Doctor, DoctorProfile, IdentifiableDoctor } from "@/types/doctor";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
@@ -15,7 +16,7 @@ export class DoctorRepository {
         data: { user_id: data.user_id, clinic_address: data.clinic_address },
       });
       return this.toIdentifiableDoctor(doctor);
-    } catch (error: any) {
+    } catch (error) {
       throw new Error("Failed to create doctor", { cause: error });
     }
   }
@@ -60,8 +61,8 @@ export class DoctorRepository {
         data: { ...data, updated_at: new Date() },
       });
       return this.toIdentifiableDoctor(doctor);
-    } catch (error: any) {
-      if (error.code === "P2025")
+    } catch (error) {
+      if (isPrismaError(error, "P2025"))
         throw new NotFoundException("doctor not found");
       throw new Error("Failed to update doctor", { cause: error });
     }
@@ -73,8 +74,8 @@ export class DoctorRepository {
   ): Promise<void> {
     try {
       await tx.doctor.delete({ where: { id } });
-    } catch (error: any) {
-      if (error.code === "P2025")
+    } catch (error) {
+      if (isPrismaError(error, "P2025"))
         throw new NotFoundException("doctor not found");
       throw new Error("Failed to delete doctor", { cause: error });
     }

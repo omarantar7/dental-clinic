@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       { message: "Password updated successfully." },
       { status: 200 },
     );
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof InvalidOtpException) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }

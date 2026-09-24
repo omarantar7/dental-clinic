@@ -2,6 +2,8 @@ import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import UniqueException from "@/exceptions/http/UniqueException";
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
+import type { Roles } from "@/app/generated/prisma/enums";
+import { isPrismaError } from "@/lib/prisma-errors";
 import { SafeUser, User } from "@/types/user";
 import bcrypt from "bcrypt";
 
@@ -26,8 +28,8 @@ export class UserRepository {
       });
 
       return this.toSafeUser(user);
-    } catch (error: any) {
-      if (error.code === "P2002") {
+    } catch (error) {
+      if (isPrismaError(error, "P2002")) {
         throw new UniqueException(
           "Unique constraint failed, email is already in use",
         );
@@ -62,13 +64,13 @@ export class UserRepository {
   }
 
   static async listUsers(
-    params: { skip?: number; take?: number; role?: string } = {},
+    params: { skip?: number; take?: number; role?: Roles } = {},
     tx: PrismaClientOrTx = prisma,
   ): Promise<SafeUser[]> {
     const { skip = 0, take = 20, role } = params;
 
     const users = await tx.user.findMany({
-      where: role ? { role: role as any } : undefined,
+      where: role ? { role } : undefined,
       skip,
       take,
       orderBy: { created_at: "desc" },
@@ -94,11 +96,11 @@ export class UserRepository {
       });
 
       return this.toSafeUser(user);
-    } catch (error: any) {
-      if (error.code === "P2025") {
+    } catch (error) {
+      if (isPrismaError(error, "P2025")) {
         throw new NotFoundException("user not found");
       }
-      if (error.code === "P2002") {
+      if (isPrismaError(error, "P2002")) {
         throw new UniqueException(
           "Unique constraint failed, email is already in use",
         );
@@ -137,14 +139,14 @@ export class UserRepository {
           updated_at: new Date(),
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       if (
         error instanceof NotFoundException ||
         error instanceof UniqueException
       ) {
         throw error;
       }
-      if (error.code === "P2025") {
+      if (isPrismaError(error, "P2025")) {
         throw new NotFoundException("user not found");
       }
       throw new Error("Failed to update password", { cause: error });
@@ -167,8 +169,8 @@ export class UserRepository {
   ): Promise<void> {
     try {
       await tx.user.delete({ where: { id } });
-    } catch (error: any) {
-      if (error.code === "P2025") {
+    } catch (error) {
+      if (isPrismaError(error, "P2025")) {
         throw new NotFoundException("user not found");
       }
       throw new Error("Failed to delete user", { cause: error });

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     authService.persistAuth(res, userPayload);
 
     return res;
-  } catch (error: any) {
+  } catch (error) {
     return handleApiError(error);
   }
 }
