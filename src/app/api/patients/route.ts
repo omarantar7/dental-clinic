@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireDoctorAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/handle-api-error";
 import { PatientService } from "@/services/patient.service";
 import { parsePatientListQuery, PatientCreateSchema } from "@/types/patient";
 import { parseQueryString } from "@/lib/helpers/query-parser";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth(request, {
+  const auth = await requireDoctorAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
-    resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;
 
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
     const rawQuery = parseQueryString(request.nextUrl.search);
     const parsedQuery = parsePatientListQuery(rawQuery);
     const result = await PatientService.listPatients(
-      auth.doctorId!,
+      auth.doctorId,
       parsedQuery,
     );
     return NextResponse.json(result);
@@ -26,9 +25,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth(request, {
+  const auth = await requireDoctorAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
-    resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;
 
@@ -45,13 +43,13 @@ export async function POST(request: NextRequest) {
           message: i.message,
         })),
       },
-      { status: 422 },
+      { status: 400 },
     );
   }
 
   try {
     const patient = await PatientService.createPatient(
-      auth.doctorId!,
+      auth.doctorId,
       parsedData.data,
     );
     return NextResponse.json(patient, { status: 201 });

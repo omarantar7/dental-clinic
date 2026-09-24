@@ -80,6 +80,9 @@ function assertWithinComplexityLimits(
   }
 }
 
+// Values arrive from the query string as strings and are passed through
+// as-is, so gte/lte/in compare as strings. Numeric and date fields will
+// need their values coerced before these operators work on them.
 function buildFieldCondition(
   field: string,
   operator: Operator,

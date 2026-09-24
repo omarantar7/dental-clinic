@@ -44,3 +44,30 @@ export async function requireAuth(
 
   return authUser;
 }
+
+type DoctorAuthContext = TokenUserPayload & { doctorId: string };
+
+/**
+ * requireAuth for doctor-scoped routes: always resolves the doctorId,
+ * so callers get it typed as `string` without a non-null assertion.
+ */
+export async function requireDoctorAuth(
+  request: NextRequest,
+  options: { roles?: Role[] } = {},
+): Promise<DoctorAuthContext | NextResponse> {
+  const auth = await requireAuth(request, {
+    ...options,
+    resolveDoctorId: true,
+  });
+  if (auth instanceof NextResponse) return auth;
+
+  const { doctorId } = auth;
+  if (!doctorId) {
+    return NextResponse.json(
+      { message: "Something went wrong" },
+      { status: 500 },
+    );
+  }
+
+  return { ...auth, doctorId };
+}
