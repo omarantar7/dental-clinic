@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, X } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -30,17 +31,26 @@ import { ProfileMenu } from "@/features/auth/components/profile-menu";
 
 function NavLinkMenuItem({ item }: { item: NavLink }) {
   const pathname = usePathname();
-  const isActive = pathname === item.href;
+  const { isMobile, setOpenMobile } = useSidebar();
+  const isActive = !item.comingSoon && pathname === item.href;
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         isActive={isActive}
         tooltip={item.label}
-        render={<Link href={item.href} />}
+        aria-disabled={item.comingSoon}
+        className={item.comingSoon ? "pointer-events-none opacity-60" : undefined}
+        onClick={() => isMobile && setOpenMobile(false)}
+        render={item.comingSoon ? undefined : <Link href={item.href} />}
       >
         <item.icon />
-        <span>{item.label}</span>
+        <span className="truncate">{item.label}</span>
+        {item.comingSoon && (
+          <Badge variant="secondary" className="ml-auto shrink-0">
+            Coming soon
+          </Badge>
+        )}
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -48,6 +58,7 @@ function NavLinkMenuItem({ item }: { item: NavLink }) {
 
 function NavGroupMenuItem({ item }: { item: NavGroup }) {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   return (
     <Collapsible className="group/collapsible">
@@ -56,18 +67,35 @@ function NavGroupMenuItem({ item }: { item: NavGroup }) {
           render={<SidebarMenuButton tooltip={item.label} />}
         >
           <item.icon />
-          <span>{item.label}</span>
-          <ChevronRight className="ml-auto transition-transform group-data-open/collapsible:rotate-90" />
+          <span className="truncate">{item.label}</span>
+          {item.comingSoon && (
+            <Badge variant="secondary" className="ml-2 shrink-0">
+              Coming soon
+            </Badge>
+          )}
+          <ChevronRight className="ml-auto shrink-0 transition-transform group-data-open/collapsible:rotate-90" />
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub>
             {item.items.map((subItem) => (
               <SidebarMenuSubItem key={subItem.href}>
                 <SidebarMenuSubButton
-                  isActive={pathname === subItem.href}
-                  render={<Link href={subItem.href} />}
+                  isActive={!subItem.comingSoon && pathname === subItem.href}
+                  aria-disabled={subItem.comingSoon}
+                  className={
+                    subItem.comingSoon
+                      ? "pointer-events-none opacity-60"
+                      : undefined
+                  }
+                  onClick={() => isMobile && setOpenMobile(false)}
+                  render={subItem.comingSoon ? undefined : <Link href={subItem.href} />}
                 >
-                  {subItem.label}
+                  <span className="truncate">{subItem.label}</span>
+                  {subItem.comingSoon && (
+                    <Badge variant="secondary" className="ml-auto shrink-0">
+                      Coming soon
+                    </Badge>
+                  )}
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             ))}
@@ -83,8 +111,8 @@ function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" side={isMobile ? "right" : "left"}>
-      <SidebarHeader className="flex-row items-center justify-between py-6 md:pb-10">
-        <div className="flex items-center gap-2 overflow-hidden px-2 group-data-[collapsible=icon]:hidden">
+      <SidebarHeader className="flex-row items-center justify-between py-6 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-3 md:pb-10">
+        <div className="flex items-center gap-2 overflow-hidden px-2">
           <Image
             src="/dentalLogo.png"
             alt=""
@@ -92,7 +120,9 @@ function AppSidebar() {
             height={24}
             className="shrink-0"
           />
-          <span className="truncate text-sm font-semibold">Dental Clinic</span>
+          <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
+            Dental Clinic
+          </span>
         </div>
         {isMobile ? (
           <Button variant="ghost" size="icon-lg" onClick={toggleSidebar}>
