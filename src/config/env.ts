@@ -24,4 +24,10 @@ const envSchema = z.object({
 
 export type EnvSchema = z.infer<typeof envSchema>;
 
-export default envSchema.parse(process.env);
+// `next build` imports route modules to collect their config, and the build
+// has no runtime env (e.g. the Docker build stage). Validate at runtime only.
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+
+export default isBuildPhase
+  ? (process.env as unknown as EnvSchema)
+  : envSchema.parse(process.env);

@@ -5,11 +5,18 @@ import {
 } from "@/services/email-templates/password-reset.template";
 import type { EmailTemplate } from "@/services/email-templates/types";
 
-const resend = new Resend(env.RESEND_API_KEY);
+// Created on first use: `new Resend()` throws without an API key, and
+// `next build` imports this module without the runtime env.
+let resend: Resend | undefined;
+
+function getResend(): Resend {
+  resend ??= new Resend(env.RESEND_API_KEY);
+  return resend;
+}
 
 export class EmailService {
   static async sendEmail(to: string, template: EmailTemplate): Promise<void> {
-    const { error } = await resend.emails.send({
+    const { error } = await getResend().emails.send({
       from: env.RESEND_FROM_EMAIL,
       to,
       subject: template.subject,
