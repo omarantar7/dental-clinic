@@ -1,5 +1,6 @@
 import { TokenUserPayload } from "@/config/types";
 import { HttpException } from "@/exceptions/http/HttpException";
+import { handleApiError } from "@/lib/handle-api-error";
 import { AuthService } from "@/services/auth.service";
 import { UserService } from "@/services/user.service";
 import { loginValidation } from "@/types/auth";
@@ -33,12 +34,6 @@ export async function POST(request: NextRequest) {
 
     return res;
   } catch (error: any) {
-    if (error.name instanceof HttpException) {
-      return NextResponse.json(
-        { message: error.message },
-        { status: error.status },
-      );
-    }
-    return NextResponse.json({ message: error?.message }, { status: 500 });
+    return handleApiError(error);
   }
 }
