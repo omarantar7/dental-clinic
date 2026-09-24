@@ -21,10 +21,6 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (error: any) {
-    console.log(error);
-    return NextResponse.json(
-      { message: "Something went wrong" },
-      { status: 500 },
-    );
+    return NextResponse.json({ message: "A reset code has been sent." }, { status: 200 });
   }
 }
