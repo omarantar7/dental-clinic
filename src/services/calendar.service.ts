@@ -1,5 +1,6 @@
 import { SessionRepository } from "@/repositories/session.repository";
 import type { CalendarEvent } from "@/types/calendar";
+import { computePaymentStatus } from "@/lib/helpers/payment-status";
 
 export class CalendarService {
   static async getEvents(
@@ -25,12 +26,6 @@ export class CalendarService {
         (sum, payment) => sum + payment.amount,
         0,
       );
-      const paymentStatus =
-        amountPaid <= 0
-          ? "SCHEDULED"
-          : amountPaid >= session.total_amount
-            ? "COMPLETED"
-            : "INPROGRESS";
 
       return {
         id: session.id,
@@ -41,7 +36,7 @@ export class CalendarService {
         patient_id: session.patient_id,
         patient_name: session.patient.full_name,
         status: session.status,
-        payment_status: paymentStatus,
+        payment_status: computePaymentStatus(session.total_amount, amountPaid),
       };
     });
   }

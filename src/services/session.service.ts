@@ -1,4 +1,6 @@
+import prisma from "@/lib/db";
 import { SessionRepository } from "@/repositories/session.repository";
+import { BadRequestException } from "@/exceptions/http/BadRequestException";
 import type { SessionCreateInput, SessionUpdateInput } from "@/types/session";
 
 export class SessionService {
@@ -22,7 +24,17 @@ export class SessionService {
   }
 
   static async createSession(doctorId: string, data: SessionCreateInput) {
-    return SessionRepository.createSession(doctorId, data);
+    return prisma.$transaction(async (tx) => {
+      await SessionRepository.lockDoctorSchedule(doctorId, tx);
+      await SessionRepository.ensureNoTimeConflict(
+        doctorId,
+        data.session_start_date,
+        data.session_end_date,
+        undefined,
+        tx,
+      );
+      return SessionRepository.createSession(doctorId, data, tx);
+    });
   }
 
   static async updateSession(
@@ -30,7 +42,36 @@ export class SessionService {
     doctorId: string,
     data: SessionUpdateInput,
   ) {
-    return SessionRepository.updateSession(id, doctorId, data);
+    return prisma.$transaction(async (tx) => {
+      await SessionRepository.lockDoctorSchedule(doctorId, tx);
+      const existing = await SessionRepository.getSessionById(
+        id,
+        doctorId,
+        tx,
+      );
+
+      // Zod only checks the pair when both dates are sent, so validate
+      // the final pair after merging with the stored values.
+      const nextStart = data.session_start_date ?? existing.session_start_date;
+      const nextEnd = data.session_end_date ?? existing.session_end_date;
+
+      if (nextStart && nextEnd) {
+        if (nextEnd <= nextStart) {
+          throw new BadRequestException(
+            "session_end_date must be after session_start_date",
+          );
+        }
+        await SessionRepository.ensureNoTimeConflict(
+          doctorId,
+          nextStart,
+          nextEnd,
+          id,
+          tx,
+        );
+      }
+
+      return SessionRepository.updateSession(id, doctorId, data, tx);
+    });
   }
 
   static async deleteSession(id: string, doctorId: string): Promise<void> {

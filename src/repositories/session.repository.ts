@@ -12,26 +12,16 @@ import type {
 } from "@/types/session";
 import { ParsedListQuery } from "@/lib/helpers/query-parser";
 import { ConflictException } from "@/exceptions/http/ConflictException";
+import { computePaymentStatus } from "@/lib/helpers/payment-status";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
 
 export class SessionRepository {
-  static hasOverlap(
-    startA: Date,
-    endA: Date,
-    startB: Date,
-    endB: Date,
-  ): boolean {
-    return startA < endB && endA > startB;
-  }
-
   private static computePaymentStatus(
     totalAmount: number,
     amountPaid: number,
   ): Session["payment_status"] {
-    if (amountPaid <= 0) return "SCHEDULED";
-    if (amountPaid >= totalAmount) return "COMPLETED";
-    return "INPROGRESS";
+    return computePaymentStatus(totalAmount, amountPaid);
   }
 
   private static toSession(session: RawSessionWithPayments): Session {
@@ -73,38 +63,37 @@ export class SessionRepository {
     };
   }
 
-  private static async ensureNoTimeConflict(
+  /**
+   * Serializes schedule writes for one doctor until the transaction ends,
+   * so two concurrent requests can't both pass the conflict check.
+   * Must be called with a transaction client.
+   */
+  static async lockDoctorSchedule(
+    doctorId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${doctorId}))`;
+  }
+
+  static async ensureNoTimeConflict(
     doctorId: string,
     startDate: Date,
     endDate: Date,
     excludedSessionId?: string,
     tx: PrismaClientOrTx = prisma,
   ): Promise<void> {
-    const sessions = await tx.session.findMany({
+    const conflictingSession = await tx.session.findFirst({
       where: {
         doctor_id: doctorId,
         status: { not: "DELETED" },
+        id: excludedSessionId ? { not: excludedSessionId } : undefined,
+        session_start_date: { lt: endDate },
+        session_end_date: { gt: startDate },
       },
-      select: {
-        id: true,
-        session_start_date: true,
-        session_end_date: true,
-      },
+      select: { id: true },
     });
 
-    const hasConflict = sessions.some((session) => {
-      if (excludedSessionId && session.id === excludedSessionId) return false;
-      if (!session.session_start_date || !session.session_end_date)
-        return false;
-      return this.hasOverlap(
-        startDate,
-        endDate,
-        new Date(session.session_start_date),
-        new Date(session.session_end_date),
-      );
-    });
-
-    if (hasConflict) {
+    if (conflictingSession) {
       throw new ConflictException(
         "This time slot overlaps an existing appointment.",
         { code: "SESSION_TIME_CONFLICT" },
@@ -266,23 +255,13 @@ export class SessionRepository {
       throw new NotFoundException("patient not found");
     }
 
-    const startDate = new Date(data.session_start_date);
-    const endDate = new Date(data.session_end_date);
-    await this.ensureNoTimeConflict(
-      doctorId,
-      startDate,
-      endDate,
-      undefined,
-      tx,
-    );
-
     const session = await tx.session.create({
       data: {
         doctor_id: doctorId,
         patient_id: data.patient_id,
         session_name: data.session_name,
-        session_start_date: startDate,
-        session_end_date: endDate,
+        session_start_date: data.session_start_date,
+        session_end_date: data.session_end_date,
         total_amount: data.total_amount,
         diagnosis: data.diagnosis ?? null,
         tooth_numbers: data.tooth_numbers ?? null,
@@ -303,32 +282,11 @@ export class SessionRepository {
     data: SessionUpdateInput,
     tx: PrismaClientOrTx = prisma,
   ): Promise<SessionWithPayments> {
-    const existing = await this.getSessionById(id, doctorId, tx);
-
-    const nextStart =
-      data.session_start_date !== undefined
-        ? new Date(data.session_start_date)
-        : existing.session_start_date;
-    const nextEnd =
-      data.session_end_date !== undefined
-        ? new Date(data.session_end_date)
-        : existing.session_end_date;
-
-    if (nextStart && nextEnd) {
-      await this.ensureNoTimeConflict(doctorId, nextStart, nextEnd, id, tx);
-    }
+    await this.getSessionById(id, doctorId, tx);
 
     const updatedSession = await tx.session.update({
       where: { id },
-      data: {
-        ...data,
-        ...(data.session_start_date !== undefined && {
-          session_start_date: nextStart,
-        }),
-        ...(data.session_end_date !== undefined && {
-          session_end_date: nextEnd,
-        }),
-      },
+      data,
       include: { payments: true },
     });
 
