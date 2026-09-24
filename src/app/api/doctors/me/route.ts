@@ -5,7 +5,10 @@ import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/handle-api-error";
 
 export async function GET(request: NextRequest) {
-  const authUser = requireAuth(request, ["DOCTOR"]);
+  const authUser = await requireAuth(request, {
+    roles: ["DOCTOR"],
+    resolveDoctorId: true,
+  });
   if (authUser instanceof NextResponse) return authUser;
 
   try {
@@ -17,7 +20,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const authUser = requireAuth(request, ["DOCTOR"]);
+  const authUser = await requireAuth(request, {
+    roles: ["DOCTOR"],
+    resolveDoctorId: true,
+  });
   if (authUser instanceof NextResponse) return authUser;
 
   const body = await request.json();
