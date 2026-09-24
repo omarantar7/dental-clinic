@@ -1,3 +1,4 @@
+import { InvalidCredentialsException } from "@/exceptions/http/AuthenticationException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import { UserRepository } from "@/repositories/user.repository";
 import { SafeUser, User } from "@/types/user";
@@ -16,13 +17,13 @@ export class UserService {
     const user = await UserRepository.findByEmail(email);
 
     if (!user) {
-      throw new NotFoundException("Invalid email or password");
+      throw new InvalidCredentialsException();
     }
 
     const passwordMatches = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatches) {
-      throw new NotFoundException("Invalid email or password");
+      throw new InvalidCredentialsException();
     }
 
     const { password_hash, ...safeUser } = user;

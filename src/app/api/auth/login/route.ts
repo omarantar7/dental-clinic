@@ -1,4 +1,5 @@
 import { TokenUserPayload } from "@/config/types";
+import { HttpException } from "@/exceptions/http/HttpException";
 import { AuthService } from "@/services/auth.service";
 import { UserService } from "@/services/user.service";
 import { loginValidation } from "@/types/auth";
@@ -32,9 +33,11 @@ export async function POST(request: NextRequest) {
 
     return res;
   } catch (error: any) {
-    console.log(error);
-    if (error.name === "NotFoundException") {
-      return NextResponse.json({ message: error.message }, { status: 401 });
+    if (error.name instanceof HttpException) {
+      return NextResponse.json(
+        { message: error.message },
+        { status: error.status },
+      );
     }
     return NextResponse.json({ message: error?.message }, { status: 500 });
   }

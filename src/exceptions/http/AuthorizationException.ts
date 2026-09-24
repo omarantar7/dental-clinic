@@ -3,7 +3,7 @@ import { HttpException } from "./HttpException";
 export class AuthorizationException extends HttpException {
     constructor(message: string) {
         super(403, message);
-        this.name = "AuthenticationFailedException";
+        this.name = "AuthorizationException";
     }
 }
 
