@@ -112,6 +112,23 @@ export class UserRepository {
     tx: PrismaClientOrTx = prisma,
   ): Promise<void> {
     try {
+      const user = await tx.user.findUnique({ where: { id } });
+
+      if (!user) {
+        throw new NotFoundException("user not found");
+      }
+
+      const isSamePassword = await bcrypt.compare(
+        newPassword,
+        user.password_hash,
+      );
+
+      if (isSamePassword) {
+        throw new UniqueException(
+          "New password must be different from the current password",
+        );
+      }
+
       await tx.user.update({
         where: { id },
         data: {
@@ -121,6 +138,12 @@ export class UserRepository {
         },
       });
     } catch (error: any) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UniqueException
+      ) {
+        throw error;
+      }
       if (error.code === "P2025") {
         throw new NotFoundException("user not found");
       }
