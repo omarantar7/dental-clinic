@@ -10,6 +10,7 @@ import type {
   SecretaryCreateInput,
   SecretaryResponse,
   SecretaryUpdateInput,
+  SecretaryUpdateProfileInput,
 } from "@/types/secertary";
 
 export class SecretaryService {
@@ -113,7 +114,14 @@ export class SecretaryService {
     });
   }
 
-  static async getSecretaryProfile(userId: string) {
-    return SecretaryRepository.getSecretaryByUserId(userId);
+  static async getMyProfile(userId: string): Promise<SecretaryResponse> {
+    return SecretaryRepository.getSecretaryProfileByUserId(userId);
+  }
+
+  static async updateMyProfile(
+    userId: string,
+    data: SecretaryUpdateProfileInput,
+  ): Promise<SecretaryResponse> {
+    return SecretaryRepository.updateSecretaryProfileByUserId(userId, data);
   }
 }
