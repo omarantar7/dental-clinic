@@ -1,0 +1,203 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to build/deploy (defaults to the triggering ref's HEAD). Useful for rollback or testing a branch."
+        required: false
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: omarantar7/dental-clinic
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  # Builds the image ONCE and pushes it to GHCR tagged by commit SHA. Both
+  # deploy jobs below pull this exact tag - it is never rebuilt per environment.
+  build:
+    needs: lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.vars.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+      - id: vars
+        run: echo "sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Runtime image - what the "app" service runs
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runner
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.sha }}
+          cache-from: type=gha,scope=dental-clinic-runner
+          cache-to: type=gha,mode=max,scope=dental-clinic-runner
+
+      # Builder-stage image - what the "migrate" service runs (has the full
+      # node_modules incl. the prisma CLI, which the slim runner image doesn't)
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: builder
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:builder-${{ steps.vars.outputs.sha }}
+          cache-from: type=gha,scope=dental-clinic-builder
+          cache-to: type=gha,mode=max,scope=dental-clinic-builder
+
+  # TODO: remove `if: false` once the sandbox server is provisioned and its
+  # GitHub Environment secrets exist (see docs/deployment.md). Disabled for
+  # now rather than deleted, so production can deploy without waiting on a
+  # server that doesn't exist yet - re-enable this alongside restoring
+  # deploy-production's `needs: [build, deploy-sandbox]` below.
+  deploy-sandbox:
+    if: false
+    needs: build
+    runs-on: ubuntu-latest
+    environment: sandbox
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+      - name: Trust the server's host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Stage deploy files
+        run: |
+          mkdir -p deploy_staging/nginx
+          cp docker-compose.yaml deploy_staging/
+          cp deploy/remote-deploy.sh deploy_staging/
+          cp nginx/production.conf nginx/sandbox.conf nginx/init-letsencrypt.sh deploy_staging/nginx/
+          {
+            echo "NODE_ENV=production"
+            echo "IMAGE_TAG=${{ needs.build.outputs.image_tag }}"
+            echo "NGINX_CONF_FILE=${{ vars.NGINX_CONF_FILE }}"
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
+            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}"
+            echo "TOKEN_EXPIRATION=${{ secrets.TOKEN_EXPIRATION }}"
+            echo "REFRESH_TOKEN_EXPIRATION=${{ secrets.REFRESH_TOKEN_EXPIRATION }}"
+            echo "OTP_EXPIRATION_MINUTES=${{ secrets.OTP_EXPIRATION_MINUTES }}"
+            echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}"
+            echo "RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}"
+            echo "R2_ENDPOINT=${{ secrets.R2_ENDPOINT }}"
+            echo "R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}"
+            echo "R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}"
+            echo "R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }}"
+            echo "R2_KEY_PREFIX=${{ secrets.R2_KEY_PREFIX }}"
+          } > deploy_staging/.env
+
+      - name: Sync files to server
+        run: |
+          rsync -az --delete -e "ssh -p ${{ secrets.SSH_PORT }}" \
+            deploy_staging/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/dental-clinic/"
+
+      - name: Pull and start containers
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "GHCR_USERNAME='${{ vars.GHCR_USERNAME }}' GHCR_PAT='${{ secrets.GHCR_PAT }}' bash /opt/dental-clinic/remote-deploy.sh"
+
+      - name: Smoke test
+        run: curl -fsS --max-time 10 https://sandbox.dental-clinic.cc/ > /dev/null
+
+  # Same image (needs.build.outputs.image_tag), same steps as deploy-sandbox,
+  # targeting the "env" GitHub Environment (production server). Add a required
+  # reviewer on the "env" environment in repo Settings for a manual-approval
+  # gate; that's what actually pauses this job, nothing in this file expresses it.
+  #
+  # TODO: once sandbox is provisioned and deploy-sandbox (above) is
+  # re-enabled, change `needs: build` back to `needs: [build, deploy-sandbox]`
+  # so production always waits on sandbox succeeding first.
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: env
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+      - name: Trust the server's host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Stage deploy files
+        run: |
+          mkdir -p deploy_staging/nginx
+          cp docker-compose.yaml deploy_staging/
+          cp deploy/remote-deploy.sh deploy_staging/
+          cp nginx/production.conf nginx/sandbox.conf nginx/init-letsencrypt.sh deploy_staging/nginx/
+          {
+            echo "NODE_ENV=production"
+            echo "IMAGE_TAG=${{ needs.build.outputs.image_tag }}"
+            echo "NGINX_CONF_FILE=${{ vars.NGINX_CONF_FILE }}"
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
+            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}"
+            echo "TOKEN_EXPIRATION=${{ secrets.TOKEN_EXPIRATION }}"
+            echo "REFRESH_TOKEN_EXPIRATION=${{ secrets.REFRESH_TOKEN_EXPIRATION }}"
+            echo "OTP_EXPIRATION_MINUTES=${{ secrets.OTP_EXPIRATION_MINUTES }}"
+            echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}"
+            echo "RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}"
+            echo "R2_ENDPOINT=${{ secrets.R2_ENDPOINT }}"
+            echo "R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}"
+            echo "R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}"
+            echo "R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }}"
+            echo "R2_KEY_PREFIX=${{ secrets.R2_KEY_PREFIX }}"
+          } > deploy_staging/.env
+
+      - name: Sync files to server
+        run: |
+          rsync -az --delete -e "ssh -p ${{ secrets.SSH_PORT }}" \
+            deploy_staging/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/dental-clinic/"
+
+      - name: Pull and start containers
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "GHCR_USERNAME='${{ vars.GHCR_USERNAME }}' GHCR_PAT='${{ secrets.GHCR_PAT }}' bash /opt/dental-clinic/remote-deploy.sh"
+
+      - name: Smoke test
+        run: curl -fsS --max-time 10 https://dental-clinic.cc/ > /dev/null

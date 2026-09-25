@@ -1,16 +1,17 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
 import { Prisma } from "@/app/generated/prisma/client";
+import { isPrismaError } from "@/lib/prisma-errors";
 import type {
   IdentifiableSecretary,
   Secretary,
   SecretaryListItem,
 } from "@/types/secertary";
-import type { ParsedListQuery } from "@/lib/helpers/query-parser";
+import type { DynamicWhere, ParsedListQuery } from "@/lib/helpers/query-parser";
 
 type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
 
-function nestUserSearchWhere(where: Record<string, any>): Record<string, any> {
+function nestUserSearchWhere(where: DynamicWhere): DynamicWhere {
   const { AND, OR, ...fields } = where;
   const nestedFields = Object.fromEntries(
     Object.entries(fields).map(([field, condition]) => [field, condition]),
@@ -48,7 +49,7 @@ export class SecretaryRepository {
         created_at: secretary.created_at,
         updated_at: secretary.updated_at,
       };
-    } catch (error: any) {
+    } catch (error) {
       throw new Error("Failed to create secretary", { cause: error });
     }
   }
@@ -276,9 +277,9 @@ export class SecretaryRepository {
         created_at: updatedSecretary.created_at,
         updated_at: updatedSecretary.updated_at,
       };
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      if (error.code === "P2025")
+      if (isPrismaError(error, "P2025"))
         throw new NotFoundException("secretary not found");
       throw new Error("Failed to update secretary", { cause: error });
     }
@@ -305,9 +306,9 @@ export class SecretaryRepository {
         where: { id },
         data: { updated_at: updatedAt },
       });
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      if (error.code === "P2025")
+      if (isPrismaError(error, "P2025"))
         throw new NotFoundException("secretary not found");
       throw new Error("Failed to delete secretary", { cause: error });
     }

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       parsedData.data.otp_code,
     );
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
     if (error instanceof InvalidOtpException) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }

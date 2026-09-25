@@ -1,4 +1,5 @@
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
+import type { DynamicWhere, RawQuery } from "@/lib/helpers/query-parser";
 
 const DEFAULT_OPERATORS = ["like", "eq", "ne", "gte", "lte", "in"] as const;
 type Operator = (typeof DEFAULT_OPERATORS)[number];
@@ -24,7 +25,7 @@ interface ParsedRestQuery<TSortField extends string> {
   limit: number;
   sortBy: TSortField;
   sortOrder: "asc" | "desc";
-  where: Record<string, any>;
+  where: DynamicWhere;
 }
 
 type SearchCondition = Record<string, Partial<Record<Operator, string>>>;
@@ -40,11 +41,12 @@ type RawSearchInput = SearchCondition & {
  * DB from expensive/degenerate query plans.
  */
 function assertWithinComplexityLimits(
-  node: any,
+  node: unknown,
   depth: number,
   totalCount: { value: number },
 ): void {
   if (!node || typeof node !== "object") return;
+  const record = node as Record<string, unknown>;
 
   if (depth > MAX_GROUP_DEPTH) {
     throw new BadRequestException(
@@ -53,7 +55,7 @@ function assertWithinComplexityLimits(
   }
 
   for (const groupKey of ["or", "and"] as const) {
-    const group = node[groupKey];
+    const group = record[groupKey];
     if (!Array.isArray(group)) continue;
 
     if (group.length > MAX_CONDITIONS_PER_GROUP) {
@@ -67,7 +69,7 @@ function assertWithinComplexityLimits(
     }
   }
 
-  const { or, and, ...fieldConditions } = node;
+  const { or, and, ...fieldConditions } = record;
   for (const operators of Object.values(fieldConditions)) {
     if (!operators || typeof operators !== "object") continue;
     totalCount.value += Object.keys(operators).length;
@@ -87,7 +89,7 @@ function buildFieldCondition(
   field: string,
   operator: Operator,
   value: string,
-): Record<string, any> {
+): DynamicWhere {
   switch (operator) {
     case "like":
       return { [field]: { contains: value, mode: "insensitive" } };
@@ -108,8 +110,8 @@ function buildConditionGroup<TSearchField extends string>(
   condition: SearchCondition,
   allowedSearchFields: readonly TSearchField[],
   allowedOperators: readonly Operator[],
-): Record<string, any>[] {
-  const clauses: Record<string, any>[] = [];
+): DynamicWhere[] {
+  const clauses: DynamicWhere[] = [];
 
   for (const [field, operators] of Object.entries(condition)) {
     if (!allowedSearchFields.includes(field as TSearchField)) continue;
@@ -130,12 +132,12 @@ function buildWhereFromSearch<TSearchField extends string>(
   search: RawSearchInput | undefined,
   allowedSearchFields: readonly TSearchField[],
   allowedOperators: readonly Operator[],
-): Record<string, any> {
+): DynamicWhere {
   if (!search) return {};
 
   assertWithinComplexityLimits(search, 0, { value: 0 });
 
-  const clauses: Record<string, any>[] = [];
+  const clauses: DynamicWhere[] = [];
 
   if (Array.isArray(search.or)) {
     const orClauses = search.or.flatMap((c) =>
@@ -188,11 +190,11 @@ export function createRestQueryParser<
   const defaultLimit = config.defaultLimit ?? 20;
   const maxLimit = config.maxLimit ?? 100;
 
-  return function parse(raw: Record<string, any>): ParsedRestQuery<TSortField> {
-    const page = Math.max(1, parseInt(raw.page, 10) || 1);
+  return function parse(raw: RawQuery): ParsedRestQuery<TSortField> {
+    const page = Math.max(1, parseInt(String(raw.page), 10) || 1);
     const limit = Math.min(
       maxLimit,
-      Math.max(1, parseInt(raw["per-page"], 10) || defaultLimit),
+      Math.max(1, parseInt(String(raw["per-page"]), 10) || defaultLimit),
     );
     const { sortBy, sortOrder } = parseSort(
       raw.sort,

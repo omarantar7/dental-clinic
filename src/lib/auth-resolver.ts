@@ -10,7 +10,7 @@ export class AuthResolver {
   constructor(private readonly authService: AuthService) {}
 
   resolve(token?: string, refreshToken?: string): AuthResolution {
-    let payload = this.tryVerify(token);
+    const payload = this.tryVerify(token);
 
     if (payload) {
       return { payload, refreshedToken: null };

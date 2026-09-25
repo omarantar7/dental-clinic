@@ -7,7 +7,6 @@ const envSchema = z.object({
   POSTGRES_USER: z.string(),
   POSTGRES_PASSWORD: z.string(),
   POSTGRES_DB: z.string(),
-  POSTGRES_PORT: z.coerce.number(),
   DATABASE_URL: z.string(),
   JWT_SECRET_KEY: z.string(),
   TOKEN_EXPIRATION: z.string().regex(durationRegex),
@@ -19,8 +18,15 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string(),
   R2_SECRET_ACCESS_KEY: z.string(),
   R2_BUCKET_NAME: z.string(),
+  R2_KEY_PREFIX: z.string().default(""),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;
 
-export default envSchema.parse(process.env);
+// `next build` imports route modules to collect their config, and the build
+// has no runtime env (e.g. the Docker build stage). Validate at runtime only.
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+
+export default isBuildPhase
+  ? (process.env as unknown as EnvSchema)
+  : envSchema.parse(process.env);

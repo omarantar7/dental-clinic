@@ -1,5 +1,6 @@
 import z from "zod";
 import { createRestQueryParser } from "@/lib/helpers/rest-query";
+import type { DynamicWhere, RawQuery } from "@/lib/helpers/query-parser";
 import { Payment } from "./payment";
 
 const SessionStatusSchema = z.enum(["UNCOMPLETED", "COMPLETED", "DELETED"]);
@@ -95,7 +96,7 @@ type SessionDetail = SessionWithPayments & {
   previous_sessions: SessionWithPayments[];
 };
 
-const parseSessionListQuery = (raw: Record<string, any>) => {
+const parseSessionListQuery = (raw: RawQuery) => {
   const baseQuery = createRestQueryParser({
     allowedSortFields: [
       "id",
@@ -114,7 +115,7 @@ const parseSessionListQuery = (raw: Record<string, any>) => {
     defaultSortField: "session_start_date",
   })(raw);
 
-  const where: Record<string, any> = { ...baseQuery.where };
+  const where: DynamicWhere = { ...baseQuery.where };
 
   if (raw.patient_id) {
     where.patient_id = String(raw.patient_id);
@@ -128,15 +129,16 @@ const parseSessionListQuery = (raw: Record<string, any>) => {
   }
 
   if (raw.from || raw.to) {
-    where.session_start_date = {};
+    const startDateFilter: { gte?: Date; lte?: Date } = {};
     if (raw.from) {
-      where.session_start_date.gte = new Date(String(raw.from));
+      startDateFilter.gte = new Date(String(raw.from));
     }
     if (raw.to) {
       const endOfDay = new Date(String(raw.to));
       endOfDay.setUTCHours(23, 59, 59, 999);
-      where.session_start_date.lte = endOfDay;
+      startDateFilter.lte = endOfDay;
     }
+    where.session_start_date = startDateFilter;
   }
 
   return { ...baseQuery, where };
