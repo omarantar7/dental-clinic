@@ -73,7 +73,8 @@ function PatientImages({ patientId }: { patientId: string }) {
                     className="h-full w-full cursor-pointer object-cover"
                     onClick={() => setPreviewImage(image)}
                   />
-                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  {/* Hover-revealed icons only work with a pointer; touch devices get the labelled buttons below instead */}
+                  <div className="absolute top-1 right-1 hidden gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:flex">
                     <Button
                       variant="secondary"
                       size="icon-xs"
@@ -97,6 +98,28 @@ function PatientImages({ patientId }: { patientId: string }) {
                 <Text className="truncate text-xs text-foreground">
                   {image.title}
                 </Text>
+                <div className="flex flex-col gap-1 md:hidden">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={() =>
+                      setDialogState({ mode: "edit", data: image })
+                    }
+                  >
+                    <Pencil />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setDeleteTarget(image)}
+                  >
+                    <Trash2 />
+                    Delete
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -143,14 +166,15 @@ function PatientImages({ patientId }: { patientId: string }) {
         open={!!previewImage}
         onOpenChange={(open) => !open && setPreviewImage(null)}
       >
-        <DialogContent className="flex max-h-[95vh] w-full max-w-[95vw] items-center justify-center gap-0 p-2 sm:max-w-[95vw]">
+        {/* pt-10 reserves a strip for the close button so it never sits on top of the image */}
+        <DialogContent className="flex max-h-[95vh] w-full max-w-[95vw] items-center justify-center gap-0 p-2 pt-10 sm:max-w-[95vw]">
           <DialogTitle className="sr-only">{previewImage?.title}</DialogTitle>
           {previewImage && (
             // eslint-disable-next-line @next/next/no-img-element -- see thumbnail note above
             <img
               src={previewImage.url}
               alt={previewImage.title}
-              className="max-h-[90vh] max-w-full rounded-lg object-contain"
+              className="max-h-[calc(95vh-3rem)] max-w-full rounded-lg object-contain"
             />
           )}
         </DialogContent>
