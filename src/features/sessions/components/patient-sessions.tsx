@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 
@@ -76,39 +75,24 @@ function PatientSessions({ patientId }: { patientId: string }) {
           sort={sort}
           onSortChange={setSort}
           emptyMessage="No sessions yet."
-          actions={(row) => (
-            <>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                nativeButton={false}
-                render={
-                  <Link href={`/patients/${patientId}/sessions/${row.id}`} />
-                }
-              >
-                <Eye />
-                <span className="sr-only">View</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() =>
-                  setDialogState({ mode: "edit", data: row.id })
-                }
-              >
-                <Pencil />
-                <span className="sr-only">Edit</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setDeleteTarget(row)}
-              >
-                <Trash2 />
-                <span className="sr-only">Delete</span>
-              </Button>
-            </>
-          )}
+          actions={[
+            {
+              label: "View",
+              icon: Eye,
+              href: (row) => `/patients/${patientId}/sessions/${row.id}`,
+            },
+            {
+              label: "Edit",
+              icon: Pencil,
+              onClick: (row) => setDialogState({ mode: "edit", data: row.id }),
+            },
+            {
+              label: "Delete",
+              icon: Trash2,
+              destructive: true,
+              onClick: (row) => setDeleteTarget(row),
+            },
+          ]}
         />
 
         <DataTablePagination

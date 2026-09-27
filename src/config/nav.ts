@@ -40,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
     type: "link",
     label: "Sessions Calendar",
     href: "/sessions-calendar",
+    comingSoon: true,
     icon: Calendar,
   },
   {
