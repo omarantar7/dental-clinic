@@ -60,37 +60,65 @@ function SessionPayments({
         {sortedPayments.map((payment) => (
           <div
             key={payment.id}
-            className="flex items-center justify-between gap-3 border-b border-border pb-3 last:border-0 last:pb-0"
+            className="flex flex-col gap-3 border-b border-border pb-3 last:border-0 last:pb-0"
           >
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">
-                {formatCurrency(payment.amount)}
-              </span>
-              <Text className="text-xs">
-                {payment.payment_date ? formatDate(payment.payment_date) : "—"}
-              </Text>
-            </div>
-            <div className="flex flex-1 items-center justify-end gap-3">
-              {payment.notes && (
-                <Text className="max-w-[50%] truncate text-xs">
-                  {payment.notes}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">
+                  {formatCurrency(payment.amount)}
+                </span>
+                <Text className="text-xs">
+                  {payment.payment_date
+                    ? formatDate(payment.payment_date)
+                    : "—"}
                 </Text>
-              )}
+              </div>
+              <div className="flex flex-1 items-center justify-end gap-3">
+                {payment.notes && (
+                  <Text className="max-w-[50%] truncate text-xs">
+                    {payment.notes}
+                  </Text>
+                )}
+                <div className="hidden items-center gap-3 md:flex">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() =>
+                      setDialogState({ mode: "edit", data: payment })
+                    }
+                  >
+                    <Pencil />
+                    <span className="sr-only">Edit</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setDeleteTarget(payment)}
+                  >
+                    <Trash2 />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 md:hidden">
               <Button
-                variant="ghost"
-                size="icon-sm"
+                variant="outline"
+                size="lg"
+                className="flex-1"
                 onClick={() => setDialogState({ mode: "edit", data: payment })}
               >
                 <Pencil />
-                <span className="sr-only">Edit</span>
+                Edit
               </Button>
               <Button
-                variant="ghost"
-                size="icon-sm"
+                variant="destructive"
+                size="lg"
+                className="flex-1"
                 onClick={() => setDeleteTarget(payment)}
               >
                 <Trash2 />
-                <span className="sr-only">Delete</span>
+                Delete
               </Button>
             </div>
           </div>
