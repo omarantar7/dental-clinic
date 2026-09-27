@@ -136,8 +136,10 @@ jobs:
           ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "GHCR_USERNAME='${{ vars.GHCR_USERNAME }}' GHCR_PAT='${{ secrets.GHCR_PAT }}' bash /opt/dental-clinic/remote-deploy.sh"
 
+      # Retries because `docker compose up -d` replaces the app container and
+      # nginx returns 502 for the few seconds the new one takes to start.
       - name: Smoke test
-        run: curl -fsS --max-time 10 https://sandbox.dental-clinic.cc/ > /dev/null
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors --max-time 10 https://sandbox.dental-clinic.cc/ > /dev/null
 
   # Same image (needs.build.outputs.image_tag), same steps as deploy-sandbox,
   # targeting the "env" GitHub Environment (production server). Add a required
@@ -199,5 +201,6 @@ jobs:
           ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "GHCR_USERNAME='${{ vars.GHCR_USERNAME }}' GHCR_PAT='${{ secrets.GHCR_PAT }}' bash /opt/dental-clinic/remote-deploy.sh"
 
+      # See the sandbox smoke test for why this retries.
       - name: Smoke test
-        run: curl -fsS --max-time 10 https://dental-clinic.cc/ > /dev/null
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors --max-time 10 https://dental-clinic.cc/ > /dev/null
