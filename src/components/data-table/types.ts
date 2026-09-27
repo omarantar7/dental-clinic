@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react";
+
 interface DataTableColumn<T> {
   key: string;
   header: string;
@@ -6,4 +8,12 @@ interface DataTableColumn<T> {
   isPrimary?: boolean;
 }
 
-export type { DataTableColumn };
+// Declared as data rather than JSX so the table can render compact icon
+// buttons on desktop and labelled full-width buttons on mobile cards.
+type DataTableAction<T> = {
+  label: string;
+  icon: LucideIcon;
+  destructive?: boolean;
+} & ({ href: (row: T) => string } | { onClick: (row: T) => void });
+
+export type { DataTableAction, DataTableColumn };

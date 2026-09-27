@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -13,8 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
-import { cn } from "@/lib/utils";
-import type { DataTableColumn } from "@/components/data-table/types";
+import type {
+  DataTableAction,
+  DataTableColumn,
+} from "@/components/data-table/types";
 
 interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
@@ -23,8 +27,66 @@ interface DataTableProps<T> {
   getRowId: (row: T) => string;
   sort?: string;
   onSortChange?: (sort: string) => void;
-  actions?: (row: T) => React.ReactNode;
+  actions?: DataTableAction<T>[];
   emptyMessage?: string;
+}
+
+function RowActions<T>({
+  row,
+  actions,
+  layout,
+}: {
+  row: T;
+  actions: DataTableAction<T>[];
+  layout: "table" | "card";
+}) {
+  const isCard = layout === "card";
+
+  return (
+    <>
+      {actions.map((action) => {
+        const Icon = action.icon;
+        const buttonProps = {
+          variant: isCard
+            ? action.destructive
+              ? ("destructive" as const)
+              : ("outline" as const)
+            : ("ghost" as const),
+          size: isCard ? ("lg" as const) : ("icon-sm" as const),
+          className: isCard ? "flex-1" : undefined,
+        };
+        const content = (
+          <>
+            <Icon />
+            {isCard ? (
+              action.label
+            ) : (
+              <span className="sr-only">{action.label}</span>
+            )}
+          </>
+        );
+
+        return "href" in action ? (
+          <Button
+            key={action.label}
+            {...buttonProps}
+            nativeButton={false}
+            render={<Link href={action.href(row)} />}
+          >
+            {content}
+          </Button>
+        ) : (
+          <Button
+            key={action.label}
+            {...buttonProps}
+            onClick={() => action.onClick(row)}
+          >
+            {content}
+          </Button>
+        );
+      })}
+    </>
+  );
 }
 
 function SortIcon({ active, sort }: { active: boolean; sort: string }) {
@@ -44,7 +106,7 @@ function DataTable<T>({
   getRowId,
   sort = "",
   onSortChange,
-  actions,
+  actions = [],
   emptyMessage = "No results found.",
 }: DataTableProps<T>) {
   const activeSortField = sort.startsWith("-") ? sort.slice(1) : sort;
@@ -59,6 +121,7 @@ function DataTable<T>({
   };
 
   const isEmpty = !isLoading && data.length === 0;
+  const hasActions = actions.length > 0;
 
   return (
     <>
@@ -86,7 +149,9 @@ function DataTable<T>({
                   )}
                 </TableHead>
               ))}
-              {actions && <TableHead className="text-right">Actions</TableHead>}
+              {hasActions && (
+                <TableHead className="text-right">Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -98,7 +163,7 @@ function DataTable<T>({
                       <Skeleton className="h-4 w-24" />
                     </TableCell>
                   ))}
-                  {actions && (
+                  {hasActions && (
                     <TableCell>
                       <Skeleton className="ml-auto h-4 w-12" />
                     </TableCell>
@@ -109,7 +174,7 @@ function DataTable<T>({
             {isEmpty && (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length + (actions ? 1 : 0)}
+                  colSpan={columns.length + (hasActions ? 1 : 0)}
                   className="h-24 text-center text-muted-foreground"
                 >
                   {emptyMessage}
@@ -123,10 +188,10 @@ function DataTable<T>({
                   {columns.map((column) => (
                     <TableCell key={column.key}>{column.cell(row)}</TableCell>
                   ))}
-                  {actions && (
+                  {hasActions && (
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {actions(row)}
+                        <RowActions row={row} actions={actions} layout="table" />
                       </div>
                     </TableCell>
                   )}
@@ -166,13 +231,8 @@ function DataTable<T>({
 
             return (
               <Card key={getRowId(row)}>
-                <CardContent
-                  className={cn(
-                    "flex flex-col gap-2",
-                    actions && "flex-row items-start justify-between gap-3",
-                  )}
-                >
-                  <div className="flex flex-1 flex-col gap-1.5 overflow-hidden">
+                <CardContent className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5 overflow-hidden">
                     {primaryColumn && (
                       <span className="truncate text-sm font-medium">
                         {primaryColumn.cell(row)}
@@ -190,8 +250,10 @@ function DataTable<T>({
                       </div>
                     ))}
                   </div>
-                  {actions && (
-                    <div className="flex shrink-0 gap-1">{actions(row)}</div>
+                  {hasActions && (
+                    <div className="flex gap-2">
+                      <RowActions row={row} actions={actions} layout="card" />
+                    </div>
                   )}
                 </CardContent>
               </Card>

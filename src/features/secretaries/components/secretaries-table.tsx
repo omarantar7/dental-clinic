@@ -73,26 +73,19 @@ function SecretariesTable() {
         sort={sort}
         onSortChange={setSort}
         emptyMessage="No secretaries found."
-        actions={(row) => (
-          <>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setDialogState({ mode: "edit", data: row })}
-            >
-              <Pencil />
-              <span className="sr-only">Edit</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setDeleteTarget(row)}
-            >
-              <Trash2 />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </>
-        )}
+        actions={[
+          {
+            label: "Edit",
+            icon: Pencil,
+            onClick: (row) => setDialogState({ mode: "edit", data: row }),
+          },
+          {
+            label: "Delete",
+            icon: Trash2,
+            destructive: true,
+            onClick: (row) => setDeleteTarget(row),
+          },
+        ]}
       />
 
       <DataTablePagination
