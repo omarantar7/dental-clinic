@@ -45,6 +45,27 @@ export const PERMISSION_DESCRIPTIONS: Record<PermissionCode, string> = {
 
 export const ALL_PERMISSION_CODES = Object.values(PERMISSIONS);
 
+// Groups for the roles form, derived from each code's prefix so a newly added
+// code can't be left out; anything without a known prefix lands in "Other".
+const PERMISSION_GROUP_LABELS: Record<string, string> = {
+  PATIENTS: "Patients",
+  SESSIONS: "Sessions",
+  PAYMENTS: "Payments",
+  IMAGES: "Images",
+};
+
+type PermissionGroup = { label: string; codes: PermissionCode[] };
+
+export const PERMISSION_GROUPS: readonly PermissionGroup[] =
+  ALL_PERMISSION_CODES.reduce<PermissionGroup[]>((groups, code) => {
+    const label =
+      PERMISSION_GROUP_LABELS[code.slice(0, code.indexOf("_"))] ?? "Other";
+    const group = groups.find((existing) => existing.label === label);
+    if (group) group.codes.push(code);
+    else groups.push({ label, codes: [code] });
+    return groups;
+  }, []);
+
 const PERMISSION_CODE_SET: ReadonlySet<string> = new Set(ALL_PERMISSION_CODES);
 
 // Narrows codes read from the database, where the column is a plain string.
