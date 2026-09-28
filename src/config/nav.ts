@@ -6,6 +6,7 @@ import {
   GalleryHorizontalEnd,
   Image,
   SearchSlash,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -55,6 +56,13 @@ const NAV_ITEMS: NavItem[] = [
     label: "Secretaries",
     href: "/secretaries",
     icon: IdCardLanyard,
+    doctorOnly: true,
+  },
+  {
+    type: "link",
+    label: "Roles",
+    href: "/roles",
+    icon: ShieldCheck,
     doctorOnly: true,
   },
   {
