@@ -1,11 +1,11 @@
 import prisma from "@/lib/db";
 import { UserRepository } from "@/repositories/user.repository";
-import { SecretaryRepository } from "@/repositories/secretary.repository";
-import { DoctorRepository } from "@/repositories/doctor.repository";
+import { secretaryRepository } from "@/repositories/secretary.repository";
+import { doctorRepository } from "@/repositories/doctor.repository";
+import { roleRepository } from "@/repositories/role.repository";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import { EmailService } from "@/services/email.service";
-import { secretaryInvitationTemplate } from "@/services/email-templates/secretary-invitation.template";
 import type {
   SecretaryCreateInput,
   SecretaryResponse,
@@ -16,9 +16,9 @@ import type {
 export class SecretaryService {
   static async listSecretaries(
     doctorId: string,
-    query: Parameters<typeof SecretaryRepository.listSecretariesByDoctorId>[1],
+    query: Parameters<typeof secretaryRepository.listSecretariesByDoctorId>[1],
   ) {
-    return SecretaryRepository.listSecretariesByDoctorId(doctorId, query);
+    return secretaryRepository.listSecretariesByDoctorId(doctorId, query);
   }
 
   static async createSecretary(
@@ -26,16 +26,14 @@ export class SecretaryService {
     data: SecretaryCreateInput,
   ): Promise<SecretaryResponse> {
     const secretary = await prisma.$transaction(async (tx) => {
-      const doctor = await DoctorRepository.getDoctor(doctorId, tx).catch(
+      const doctor = await doctorRepository.getDoctor(doctorId, tx).catch(
         () => null,
       );
       if (!doctor)
         throw new NotFoundException("doctor not found for this secretary");
 
       const role = data.role_id
-        ? await tx.role.findFirst({
-              where: { id: data.role_id, doctor_id: doctorId },
-          })
+        ? await roleRepository.findByIdForDoctor(data.role_id, doctorId, tx)
         : null;
       if (data.role_id && !role)
         throw new BadRequestException("role does not belong to doctor");
@@ -51,7 +49,7 @@ export class SecretaryService {
         },
         tx,
       );
-      const secretary = await SecretaryRepository.createSecretary(
+      const secretary = await secretaryRepository.createSecretary(
         {
           user_id: user.id,
           doctor_id: doctorId,
@@ -75,14 +73,11 @@ export class SecretaryService {
         updated_at: secretary.updated_at,
       };
 
-      await EmailService.sendEmail(
-        response.email,
-        secretaryInvitationTemplate({
-          fullName: response.full_name,
-          email: response.email,
-          temporaryPassword: data.password,
-        }),
-      );
+      await EmailService.sendSecretaryInvitation({
+        email: response.email,
+        fullName: response.full_name,
+        temporaryPassword: data.password,
+      });
 
       return response;
     });
@@ -97,31 +92,32 @@ export class SecretaryService {
   ): Promise<SecretaryResponse> {
     return prisma.$transaction(async (tx) => {
       if (data.role_id) {
-        const role = await tx.role.findFirst({
-          where: { id: data.role_id, doctor_id: doctorId },
-          select: { id: true },
-        });
+        const role = await roleRepository.findByIdForDoctor(
+          data.role_id,
+          doctorId,
+          tx,
+        );
         if (!role) throw new BadRequestException("role does not belong to doctor");
       }
 
-      return SecretaryRepository.updateSecretary(id, doctorId, data, tx);
+      return secretaryRepository.updateSecretary(id, doctorId, data, tx);
     });
   }
 
   static async deleteSecretary(id: string, doctorId: string): Promise<void> {
     await prisma.$transaction(async (tx) => {
-      await SecretaryRepository.deleteSecretary(id, doctorId, tx);
+      await secretaryRepository.deleteSecretary(id, doctorId, tx);
     });
   }
 
   static async getMyProfile(userId: string): Promise<SecretaryResponse> {
-    return SecretaryRepository.getSecretaryProfileByUserId(userId);
+    return secretaryRepository.getSecretaryProfileByUserId(userId);
   }
 
   static async updateMyProfile(
     userId: string,
     data: SecretaryUpdateProfileInput,
   ): Promise<SecretaryResponse> {
-    return SecretaryRepository.updateSecretaryProfileByUserId(userId, data);
+    return secretaryRepository.updateSecretaryProfileByUserId(userId, data);
   }
 }

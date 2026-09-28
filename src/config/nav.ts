@@ -6,10 +6,19 @@ import {
   GalleryHorizontalEnd,
   Image,
   SearchSlash,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
-type NavLink = {
+import { PERMISSIONS, type PermissionCode } from "@/config/permissions";
+
+// Visibility only; the page guards and the API enforce the same rules.
+type NavAccess = {
+  permission?: PermissionCode;
+  doctorOnly?: boolean;
+};
+
+type NavLink = NavAccess & {
   type: "link";
   label: string;
   href: string;
@@ -17,7 +26,7 @@ type NavLink = {
   comingSoon?: boolean;
 };
 
-type NavGroup = {
+type NavGroup = NavAccess & {
   type: "group";
   label: string;
   icon: LucideIcon;
@@ -28,13 +37,33 @@ type NavGroup = {
 type NavItem = NavLink | NavGroup;
 
 const NAV_ITEMS: NavItem[] = [
-  { type: "link", label: "Home", href: "/", icon: Home },
-  { type: "link", label: "Patients", href: "/patients", icon: Users },
+  {
+    type: "link",
+    label: "Home",
+    href: "/",
+    icon: Home,
+    permission: PERMISSIONS.DASHBOARD_VIEW,
+  },
+  {
+    type: "link",
+    label: "Patients",
+    href: "/patients",
+    icon: Users,
+    permission: PERMISSIONS.PATIENTS_VIEW,
+  },
   {
     type: "link",
     label: "Secretaries",
     href: "/secretaries",
     icon: IdCardLanyard,
+    doctorOnly: true,
+  },
+  {
+    type: "link",
+    label: "Roles",
+    href: "/roles",
+    icon: ShieldCheck,
+    doctorOnly: true,
   },
   {
     type: "link",
@@ -42,12 +71,14 @@ const NAV_ITEMS: NavItem[] = [
     href: "/sessions-calendar",
     comingSoon: true,
     icon: Calendar,
+    permission: PERMISSIONS.CALENDAR_VIEW,
   },
   {
     type: "group",
     label: "CMS Portfolio",
     icon: GalleryHorizontalEnd,
     comingSoon: true,
+    doctorOnly: true,
     items: [
       {
         type: "link",
@@ -67,4 +98,4 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export { NAV_ITEMS, type NavItem, type NavLink, type NavGroup };
+export { NAV_ITEMS, type NavItem, type NavLink, type NavGroup, type NavAccess };

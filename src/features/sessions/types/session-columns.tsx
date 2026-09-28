@@ -38,4 +38,10 @@ const columns: DataTableColumn<Session>[] = [
   },
 ];
 
-export { columns };
+// Money columns, hidden from users without PAYMENTS_VIEW.
+const PAYMENT_COLUMN_KEYS = new Set(["total_amount", "payment_status"]);
+const columnsWithoutPayments = columns.filter(
+  (column) => !PAYMENT_COLUMN_KEYS.has(column.key),
+);
+
+export { columns, columnsWithoutPayments };

@@ -46,7 +46,9 @@ export class AuthService {
     if (!payload) {
       throw new InvalidTokenException();
     }
-    return this.generateToken(payload);
+    // The decoded token still carries `exp`/`iat`; jwt.sign rejects a payload
+    // with `exp` when `expiresIn` is also set, so re-sign only our own claims.
+    return this.generateToken({ userId: payload.userId, role: payload.role });
   }
 
   setTokenIntoCookie(res: NextResponse, token: string): void {

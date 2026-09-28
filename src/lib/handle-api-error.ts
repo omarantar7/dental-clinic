@@ -13,11 +13,10 @@ export function handleApiError(error: unknown) {
     return NextResponse.json({ message: error.message }, { status: 404 });
   }
   if (error instanceof ConflictException) {
+    // Callers put a machine-readable code (and any extra fields) in details,
+    // e.g. SESSION_TIME_CONFLICT or ROLE_IN_USE.
     return NextResponse.json(
-      {
-        message: error.message,
-        code: "SESSION_TIME_CONFLICT",
-      },
+      { ...error.details, message: error.message },
       { status: 409 },
     );
   }

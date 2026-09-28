@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
     const res = NextResponse.json({
       userId: user.id,
       role: user.role,
-      permissions: [],
     });
 
     authService.persistAuth(res, userPayload);

@@ -26,7 +26,8 @@ targeting a specific commit `sha`, e.g. for redeploying an older build).
 
 Jobs run in this order:
 
-1. **`lint`** — `npm ci` + `npm run lint`. Everything else depends on this passing.
+1. **`lint`** — `npm ci` + `npm run lint` + `npm test` (unit tests; no
+   database needed). Everything else depends on this passing.
 2. **`build`** — builds two images from the same `Dockerfile` and pushes both
    to GHCR, tagged with a 12-char commit SHA:
    - `ghcr.io/omarantar7/dental-clinic:<sha>` (the `runner` stage) — what the
@@ -53,8 +54,10 @@ things, just against different servers/secrets:
    touches the server — it only pulls prebuilt images from GHCR.
 3. SSH in and run `deploy/remote-deploy.sh`, which logs into GHCR, does
    `docker compose pull migrate app`, `docker compose up -d --remove-orphans`
-   (this also runs the one-off `migrate` service, which the `app` service
-   waits on), and reloads nginx (`nginx -t && nginx -s reload` — needed
+   (this also runs the one-off `migrate` service, which applies migrations
+   and syncs the permission table from `src/config/permissions.ts` — see
+   [rbac.md](rbac.md) — and which the `app` service waits on), and reloads
+   nginx (`nginx -t && nginx -s reload` — needed
    because compose won't restart nginx just from the bind-mounted config file
    changing on disk).
 4. A plain `curl -f https://<domain>/` smoke test.
@@ -105,6 +108,7 @@ with different values in each:
 | `R2_BUCKET_NAME` | Secret | Both environments currently share the **same** bucket (see `R2_KEY_PREFIX` below) |
 | `R2_KEY_PREFIX` | Secret | `sandbox` in the `sandbox` environment, **empty/unset** in `env` — namespaces uploaded object keys so both environments can safely share one R2 bucket without colliding |
 | `NGINX_CONF_FILE` | Variable | `production.conf` for `env`, `sandbox.conf` for `sandbox` — selects which file in `nginx/` that server's nginx container mounts. Not sensitive, so it's a variable. |
+| `APP_URL` | Variable | `https://dental-clinic.cc` for `env`, `https://sandbox.dental-clinic.cc` for `sandbox` — the app's public URL, used for links in invitation emails and as the smoke-test URL. **Required:** the app won't start without it, so the deploy job stops before touching the server if it's missing. |
 
 `DATABASE_URL` and `NODE_ENV` are **not** secrets — `docker-compose.yaml`
 builds `DATABASE_URL` itself from the three `POSTGRES_*` values, and

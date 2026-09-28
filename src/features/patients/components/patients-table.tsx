@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
+import { PERMISSIONS } from "@/config/permissions";
+import { useAccess } from "@/hooks/use-access";
 import { useRestQuery } from "@/hooks/use-rest-query";
 import { PatientFormDialog } from "@/features/patients/components/patient-form-dialog";
 import { useDeletePatient } from "@/features/patients/hooks/use-delete-patient";
@@ -42,6 +44,7 @@ function PatientsTable() {
     perPage: 10,
   });
 
+  const { can } = useAccess();
   const [dialogState, setDialogState] = useState<DialogState<string>>(null);
   const [deleteTarget, setDeleteTarget] = useState<PatientListItem | null>(
     null,
@@ -58,10 +61,12 @@ function PatientsTable() {
         onSearchChange={setSearch}
         searchPlaceholder="Search patients..."
       >
-        <Button onClick={() => setDialogState({ mode: "create" })}>
-          <Plus />
-          Add Patient
-        </Button>
+        {can(PERMISSIONS.PATIENTS_CREATE) && (
+          <Button onClick={() => setDialogState({ mode: "create" })}>
+            <Plus />
+            Add Patient
+          </Button>
+        )}
       </DataTableToolbar>
 
       <DataTable
@@ -81,12 +86,14 @@ function PatientsTable() {
           {
             label: "Edit",
             icon: Pencil,
+            hidden: !can(PERMISSIONS.PATIENTS_UPDATE),
             onClick: (row) => setDialogState({ mode: "edit", data: row.id }),
           },
           {
             label: "Delete",
             icon: Trash2,
             destructive: true,
+            hidden: !can(PERMISSIONS.PATIENTS_DELETE),
             onClick: (row) => setDeleteTarget(row),
           },
         ]}

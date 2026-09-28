@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireDoctorAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/config/permissions";
 import { handleApiError } from "@/lib/handle-api-error";
 import { PatientService } from "@/services/patient.service";
 import { PatientUpdateSchema } from "@/types/patient";
@@ -10,6 +11,7 @@ export async function GET(
 ) {
   const auth = await requireDoctorAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.PATIENTS_VIEW,
   });
   if (auth instanceof NextResponse) return auth;
 
@@ -29,6 +31,7 @@ export async function PATCH(
 ) {
   const auth = await requireDoctorAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.PATIENTS_UPDATE,
   });
   if (auth instanceof NextResponse) return auth;
 
@@ -68,6 +71,7 @@ export async function DELETE(
 ) {
   const auth = await requireDoctorAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.PATIENTS_DELETE,
   });
   if (auth instanceof NextResponse) return auth;
 

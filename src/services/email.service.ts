@@ -1,8 +1,11 @@
 import { Resend } from "resend";
+import config from "@/config";
 import env from "@/config/env";
+import { doctorInvitationTemplate } from "@/services/email-templates/doctor-invitation.template";
 import {
   passwordResetTemplate,
 } from "@/services/email-templates/password-reset.template";
+import { secretaryInvitationTemplate } from "@/services/email-templates/secretary-invitation.template";
 import type { EmailTemplate } from "@/services/email-templates/types";
 
 // Created on first use: `new Resend()` throws without an API key, and
@@ -33,5 +36,31 @@ export class EmailService {
       to,
       passwordResetTemplate(otp, env.OTP_EXPIRATION_MINUTES ?? 10),
     );
+  }
+
+  static async sendSecretaryInvitation(input: {
+    email: string;
+    fullName: string | null;
+    temporaryPassword: string;
+  }): Promise<void> {
+    await this.sendEmail(
+      input.email,
+      secretaryInvitationTemplate({ ...input, loginUrl: this.loginUrl() }),
+    );
+  }
+
+  static async sendDoctorInvitation(input: {
+    email: string;
+    fullName: string | null;
+    temporaryPassword: string;
+  }): Promise<void> {
+    await this.sendEmail(
+      input.email,
+      doctorInvitationTemplate({ ...input, loginUrl: this.loginUrl() }),
+    );
+  }
+
+  private static loginUrl(): string {
+    return new URL("/login", config.app.url).toString();
   }
 }

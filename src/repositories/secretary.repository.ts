@@ -1,15 +1,16 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
-import { Prisma } from "@/app/generated/prisma/client";
+import type { PrismaClient } from "@/app/generated/prisma/client";
 import { isPrismaError } from "@/lib/prisma-errors";
+import type { PrismaClientOrTx } from "@/types/db";
 import type {
+  ISecretaryRepository,
   IdentifiableSecretary,
   Secretary,
+  SecretaryAccessContext,
   SecretaryListItem,
 } from "@/types/secertary";
 import type { DynamicWhere, ParsedListQuery } from "@/lib/helpers/query-parser";
-
-type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
 
 function nestUserSearchWhere(where: DynamicWhere): DynamicWhere {
   const { AND, OR, ...fields } = where;
@@ -28,10 +29,12 @@ function nestUserSearchWhere(where: DynamicWhere): DynamicWhere {
   };
 }
 
-export class SecretaryRepository {
-  static async createSecretary(
+export class SecretaryRepository implements ISecretaryRepository {
+  constructor(private readonly db: PrismaClient = prisma) {}
+
+  async createSecretary(
     data: Secretary,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<IdentifiableSecretary & Pick<SecretaryListItem, "created_at" | "updated_at">> {
     try {
       const createdAt = new Date();
@@ -54,18 +57,18 @@ export class SecretaryRepository {
     }
   }
 
-  static async getSecretary(
+  async getSecretary(
     id: string,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<IdentifiableSecretary> {
     const secretary = await tx.secretary.findUnique({ where: { id } });
     if (!secretary) throw new NotFoundException("secretary not found");
     return this.toIdentifiableSecretary(secretary);
   }
 
-  static async getSecretaryByUserId(
+  async getSecretaryByUserId(
     userId: string,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<IdentifiableSecretary | null> {
     const secretary = await tx.secretary.findUnique({
       where: { user_id: userId },
@@ -73,9 +76,39 @@ export class SecretaryRepository {
     return secretary ? this.toIdentifiableSecretary(secretary) : null;
   }
 
-  static async getSecretaryProfileByUserId(
+  async getAccessContextByUserId(
     userId: string,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
+  ): Promise<SecretaryAccessContext | null> {
+    const secretary = await tx.secretary.findUnique({
+      where: { user_id: userId },
+      select: {
+        doctor_id: true,
+        user: { select: { status: true } },
+        role: {
+          select: {
+            role_permissions: {
+              select: { permission: { select: { code: true } } },
+            },
+          },
+        },
+      },
+    });
+    if (!secretary) return null;
+
+    return {
+      doctorId: secretary.doctor_id,
+      status: secretary.user.status,
+      permissionCodes:
+        secretary.role?.role_permissions.map(
+          ({ permission }) => permission.code,
+        ) ?? [],
+    };
+  }
+
+  async getSecretaryProfileByUserId(
+    userId: string,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<SecretaryListItem> {
     const secretary = await tx.secretary.findUnique({
       where: { user_id: userId },
@@ -114,10 +147,10 @@ export class SecretaryRepository {
     };
   }
 
-  static async updateSecretaryProfileByUserId(
+  async updateSecretaryProfileByUserId(
     userId: string,
     data: { phone_number?: string; full_name?: string | null },
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<SecretaryListItem> {
     await tx.user.update({
       where: { id: userId },
@@ -127,10 +160,10 @@ export class SecretaryRepository {
     return this.getSecretaryProfileByUserId(userId, tx);
   }
 
-  static async listSecretariesByDoctorId(
+  async listSecretariesByDoctorId(
     doctorId: string,
     query: ParsedListQuery,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<{
     data: SecretaryListItem[];
     page: number;
@@ -200,7 +233,7 @@ export class SecretaryRepository {
     };
   }
 
-  static async updateSecretary(
+  async updateSecretary(
     id: string,
     doctorId: string,
     data: {
@@ -209,7 +242,7 @@ export class SecretaryRepository {
       full_name?: string | null;
       status?: "ENABLED" | "DISABLED" | "DELETED";
     },
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<SecretaryListItem> {
     try {
       const secretary = await tx.secretary.findFirst({
@@ -285,10 +318,10 @@ export class SecretaryRepository {
     }
   }
 
-  static async deleteSecretary(
+  async deleteSecretary(
     id: string,
     doctorId: string,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<void> {
     try {
       const secretary = await tx.secretary.findFirst({
@@ -314,7 +347,7 @@ export class SecretaryRepository {
     }
   }
 
-  private static toIdentifiableSecretary(secretary: {
+  private toIdentifiableSecretary(secretary: {
     id: string;
     user_id: string;
     doctor_id: string;
@@ -330,3 +363,7 @@ export class SecretaryRepository {
     };
   }
 }
+
+// Convenience singleton for call sites that don't need custom DI.
+// For tests, construct SecretaryRepository with a mock PrismaClient instead.
+export const secretaryRepository = new SecretaryRepository();

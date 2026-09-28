@@ -1,6 +1,7 @@
-import { input, password } from "@inquirer/prompts";
+import { confirm, input, password } from "@inquirer/prompts";
 import { RegisterDoctorSchema } from "@/types/doctor";
 import { DoctorService } from "@/services/doctor.service";
+import { EmailService } from "@/services/email.service";
 import UniqueException from "@/exceptions/http/UniqueException";
 import prisma from "@/lib/db";
 
@@ -70,6 +71,45 @@ async function main() {
     process.exit(1);
   } finally {
     await prisma.$disconnect();
+  }
+
+  await offerInvitation({
+    email: parsedData.data.email,
+    fullName: parsedData.data.full_name,
+    temporaryPassword: parsedData.data.password_hash,
+  });
+}
+
+// Runs after the doctor is saved: the account must not depend on the email
+// provider, so a failed send only warns and leaves the doctor in place.
+async function offerInvitation(invitation: {
+  email: string;
+  fullName: string | null;
+  temporaryPassword: string;
+}) {
+  const shouldSend = await confirm({
+    message: `Send an invitation email to ${invitation.email}?`,
+    default: true,
+  });
+
+  if (!shouldSend) {
+    console.log(
+      "\nℹ️  No email sent. Share the sign-in link, email, and password with the doctor yourself.",
+    );
+    return;
+  }
+
+  try {
+    await EmailService.sendDoctorInvitation(invitation);
+    console.log(`\n📧 Invitation sent to ${invitation.email}`);
+  } catch (error) {
+    console.warn(
+      "\n⚠️  The doctor was created, but the invitation email failed to send:",
+      error,
+    );
+    console.warn(
+      "   Share the sign-in link, email, and password with the doctor yourself.",
+    );
   }
 }
 

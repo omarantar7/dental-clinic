@@ -104,6 +104,7 @@ model Role {
   role_permissions  RolePermission[]
   secretaries       Secretary[]
 
+  @@unique([doctor_id, name])
   @@index([doctor_id])
   @@map("role")
 }

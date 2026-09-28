@@ -18,10 +18,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
+import { PERMISSIONS } from "@/config/permissions";
+import { useAccess } from "@/hooks/use-access";
 import { useRestQuery } from "@/hooks/use-rest-query";
 import { SessionFormDialog } from "@/features/sessions/components/session-form-dialog";
 import { useDeleteSession } from "@/features/sessions/hooks/use-delete-session";
-import { columns } from "@/features/sessions/types/session-columns";
+import {
+  columns,
+  columnsWithoutPayments,
+} from "@/features/sessions/types/session-columns";
 import type { DialogState } from "@/types/dialog-state";
 import type { Session } from "@/types/session";
 
@@ -44,6 +49,7 @@ function PatientSessions({ patientId }: { patientId: string }) {
     perPage: 5,
   });
 
+  const { can } = useAccess();
   const [dialogState, setDialogState] = useState<DialogState<string>>(null);
   const [deleteTarget, setDeleteTarget] = useState<Session | null>(null);
   const { deleteSession, isLoading: isDeleting } = useDeleteSession(() => {
@@ -55,10 +61,12 @@ function PatientSessions({ patientId }: { patientId: string }) {
     <Card>
       <CardHeader className="flex items-center justify-between">
         <CardTitle>Sessions</CardTitle>
-        <Button size="sm" onClick={() => setDialogState({ mode: "create" })}>
-          <Plus />
-          Add Session
-        </Button>
+        {can(PERMISSIONS.SESSIONS_CREATE) && (
+          <Button size="sm" onClick={() => setDialogState({ mode: "create" })}>
+            <Plus />
+            Add Session
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <DataTableToolbar
@@ -68,7 +76,9 @@ function PatientSessions({ patientId }: { patientId: string }) {
         />
 
         <DataTable
-          columns={columns}
+          columns={
+            can(PERMISSIONS.PAYMENTS_VIEW) ? columns : columnsWithoutPayments
+          }
           data={data}
           isLoading={isLoading}
           getRowId={(row) => row.id}
@@ -84,12 +94,14 @@ function PatientSessions({ patientId }: { patientId: string }) {
             {
               label: "Edit",
               icon: Pencil,
+              hidden: !can(PERMISSIONS.SESSIONS_UPDATE),
               onClick: (row) => setDialogState({ mode: "edit", data: row.id }),
             },
             {
               label: "Delete",
               icon: Trash2,
               destructive: true,
+              hidden: !can(PERMISSIONS.SESSIONS_DELETE),
               onClick: (row) => setDeleteTarget(row),
             },
           ]}

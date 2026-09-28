@@ -10,6 +10,7 @@ import { Heading } from "@/components/ui/heading";
 import { InfoRow } from "@/components/ui/info-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { PERMISSIONS } from "@/config/permissions";
 import {
   PaymentStatusBadge,
   SessionStatusBadge,
@@ -18,11 +19,14 @@ import { SessionFormDialog } from "@/features/sessions/components/session-form-d
 import { SessionImages } from "@/features/sessions/components/session-images";
 import { SessionPayments } from "@/features/sessions/components/session-payments";
 import { useSessionDetail } from "@/features/sessions/hooks/use-session-detail";
+import { useAccess } from "@/hooks/use-access";
 import { formatCurrency, formatDate, formatDateTime } from "@/utils/format";
 import type { SessionDetailViewProps } from "../types/session-props";
 
 function SessionDetailView({ patientId, sessionId }: SessionDetailViewProps) {
   const { session, isLoading, error, refetch } = useSessionDetail(sessionId);
+  const { can } = useAccess();
+  const canViewPayments = can(PERMISSIONS.PAYMENTS_VIEW);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   if (isLoading && !session) {
@@ -50,20 +54,24 @@ function SessionDetailView({ patientId, sessionId }: SessionDetailViewProps) {
           <ArrowLeft />
           Back to patient
         </Button>
-        <Button size="sm" onClick={() => setIsEditOpen(true)}>
-          <Pencil />
-          Edit
-        </Button>
+        {can(PERMISSIONS.SESSIONS_UPDATE) && (
+          <Button size="sm" onClick={() => setIsEditOpen(true)}>
+            <Pencil />
+            Edit
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <Heading level={1}>{session.session_name}</Heading>
         <SessionStatusBadge status={session.status} />
-        <PaymentStatusBadge status={session.payment_status} />
+        {canViewPayments && (
+          <PaymentStatusBadge status={session.payment_status} />
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="md:col-span-2">
+        <Card className={canViewPayments ? "md:col-span-2" : "md:col-span-3"}>
           <CardHeader>
             <CardTitle>Session details</CardTitle>
           </CardHeader>
@@ -91,33 +99,37 @@ function SessionDetailView({ patientId, sessionId }: SessionDetailViewProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Billing</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <InfoRow
-              label="Total amount"
-              value={formatCurrency(session.total_amount)}
-            />
-            <InfoRow
-              label="Amount paid"
-              value={formatCurrency(session.amount_paid)}
-            />
-            <InfoRow
-              label="Balance due"
-              value={formatCurrency(session.amount_owed)}
-            />
-          </CardContent>
-        </Card>
+        {canViewPayments && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <InfoRow
+                label="Total amount"
+                value={formatCurrency(session.total_amount)}
+              />
+              <InfoRow
+                label="Amount paid"
+                value={formatCurrency(session.amount_paid)}
+              />
+              <InfoRow
+                label="Balance due"
+                value={formatCurrency(session.amount_owed)}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      <SessionPayments
-        sessionId={session.id}
-        payments={session.payments}
-        remainingBalance={session.amount_owed}
-        onSuccess={refetch}
-      />
+      {canViewPayments && (
+        <SessionPayments
+          sessionId={session.id}
+          payments={session.payments}
+          remainingBalance={session.amount_owed}
+          onSuccess={refetch}
+        />
+      )}
 
       <SessionImages sessionId={session.id} />
 

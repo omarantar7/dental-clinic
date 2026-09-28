@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireDoctorAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/config/permissions";
 import { handleApiError } from "@/lib/handle-api-error";
 import { PatientService } from "@/services/patient.service";
 import { parsePatientListQuery, PatientCreateSchema } from "@/types/patient";
@@ -8,6 +9,7 @@ import { parseQueryString } from "@/lib/helpers/query-parser";
 export async function GET(request: NextRequest) {
   const auth = await requireDoctorAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.PATIENTS_VIEW,
   });
   if (auth instanceof NextResponse) return auth;
 
@@ -27,6 +29,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireDoctorAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.PATIENTS_CREATE,
   });
   if (auth instanceof NextResponse) return auth;
 

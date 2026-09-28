@@ -7,7 +7,7 @@ import type {
 import type { SafeUser } from "@/types/user";
 import type { IdentifiableDoctor } from "@/types/doctor";
 import { UserRepository } from "@/repositories/user.repository";
-import { DoctorRepository } from "@/repositories/doctor.repository";
+import { doctorRepository } from "@/repositories/doctor.repository";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 
 export class DoctorService {
@@ -19,7 +19,7 @@ export class DoctorService {
         { ...data, role: "DOCTOR" },
         tx,
       );
-      const doctor = await DoctorRepository.createDoctor(
+      const doctor = await doctorRepository.createDoctor(
         { user_id: user.id, clinic_address: data.clinic_address },
         tx,
       );
@@ -28,7 +28,7 @@ export class DoctorService {
   }
 
   static async getMyProfile(userId: string): Promise<DoctorProfile> {
-    return DoctorRepository.getDoctorProfileByUserId(userId);
+    return doctorRepository.getDoctorProfileByUserId(userId);
   }
 
   static async updateMyProfile(
@@ -38,7 +38,7 @@ export class DoctorService {
     const { clinic_address, phone_number, address, full_name } = data;
 
     return prisma.$transaction(async (tx) => {
-      const doctor = await DoctorRepository.getDoctorByUserId(userId, tx);
+      const doctor = await doctorRepository.getDoctorByUserId(userId, tx);
       if (!doctor)
         throw new NotFoundException("Doctor not found for this user");
 
@@ -59,10 +59,10 @@ export class DoctorService {
       }
 
       if (clinic_address !== undefined) {
-        await DoctorRepository.updateDoctor(doctor.id, { clinic_address }, tx);
+        await doctorRepository.updateDoctor(doctor.id, { clinic_address }, tx);
       }
 
-      return DoctorRepository.getDoctorProfileByUserId(userId, tx);
+      return doctorRepository.getDoctorProfileByUserId(userId, tx);
     });
   }
 }
