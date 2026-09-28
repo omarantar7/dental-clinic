@@ -2,6 +2,12 @@ import "dotenv/config";
 import { PrismaClient } from "@/app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcrypt";
+import {
+  ALL_PERMISSION_CODES,
+  PERMISSION_DESCRIPTIONS,
+  PERMISSIONS,
+  type PermissionCode,
+} from "@/config/permissions";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -71,30 +77,59 @@ const main = async () => {
 
   const doctors = doctorUsers.map((u) => u.doctor!);
 
-  // ---------- Permissions ----------
+  // ---------- Permissions (mirrors src/config/permissions.ts) ----------
   const permissions = await Promise.all(
-    [
-      { code: "MANAGE_PATIENTS", description: "Create, edit, and view patients" },
-      { code: "MANAGE_SESSIONS", description: "Create, edit, and view sessions" },
-      { code: "MANAGE_PAYMENTS", description: "Create, edit, and view payments" },
-    ].map((data) => prisma.permission.create({ data })),
+    ALL_PERMISSION_CODES.map((code) =>
+      prisma.permission.create({
+        data: { code, description: PERMISSION_DESCRIPTIONS[code] },
+      }),
+    ),
   );
+  const permissionIdByCode = new Map(permissions.map((p) => [p.code, p.id]));
 
   // ---------- Roles (nested create -> role_permission rows come free) ----------
-  const roleSeed = [
-    { doctor_id: doctors[0].id, name: "Front Desk", permission_id: permissions[0].id },
-    { doctor_id: doctors[1].id, name: "Office Manager", permission_id: permissions[1].id },
-    { doctor_id: doctors[2].id, name: "Billing Assistant", permission_id: permissions[2].id },
+  const P = PERMISSIONS;
+  const roleSeed: { doctor_id: string; name: string; codes: PermissionCode[] }[] = [
+    {
+      doctor_id: doctors[0].id,
+      name: "Front Desk",
+      codes: [
+        P.PATIENTS_VIEW, P.PATIENTS_CREATE, P.PATIENTS_UPDATE,
+        P.SESSIONS_VIEW, P.SESSIONS_CREATE, P.SESSIONS_UPDATE,
+        P.IMAGES_UPLOAD, P.CALENDAR_VIEW,
+      ],
+    },
+    {
+      doctor_id: doctors[1].id,
+      name: "Office Manager",
+      codes: [
+        P.PATIENTS_VIEW, P.PATIENTS_CREATE, P.PATIENTS_UPDATE, P.PATIENTS_DELETE,
+        P.SESSIONS_VIEW, P.SESSIONS_CREATE, P.SESSIONS_UPDATE, P.SESSIONS_DELETE,
+        P.PAYMENTS_VIEW, P.PAYMENTS_CREATE, P.PAYMENTS_UPDATE,
+        P.IMAGES_UPLOAD, P.IMAGES_DELETE, P.CALENDAR_VIEW,
+      ],
+    },
+    {
+      doctor_id: doctors[2].id,
+      name: "Billing Assistant",
+      codes: [
+        P.PATIENTS_VIEW, P.SESSIONS_VIEW,
+        P.PAYMENTS_VIEW, P.PAYMENTS_CREATE, P.PAYMENTS_UPDATE, P.PAYMENTS_DELETE,
+        P.DASHBOARD_VIEW,
+      ],
+    },
   ];
 
   const roles = await Promise.all(
-    roleSeed.map(({ doctor_id, name, permission_id }) =>
+    roleSeed.map(({ doctor_id, name, codes }) =>
       prisma.role.create({
         data: {
           doctor_id,
           name,
           role_permissions: {
-            create: { permission_id },
+            create: codes.map((code) => ({
+              permission_id: permissionIdByCode.get(code)!,
+            })),
           },
         },
       }),

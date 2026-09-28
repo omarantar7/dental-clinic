@@ -1,0 +1,44 @@
+// Single source of truth for secretary permissions. The `permission` table
+// mirrors this list via src/scripts/sync-permissions.ts (runs on every deploy).
+export const PERMISSIONS = {
+  PATIENTS_VIEW: "PATIENTS_VIEW",
+  PATIENTS_CREATE: "PATIENTS_CREATE",
+  PATIENTS_UPDATE: "PATIENTS_UPDATE",
+  PATIENTS_DELETE: "PATIENTS_DELETE",
+  SESSIONS_VIEW: "SESSIONS_VIEW",
+  SESSIONS_CREATE: "SESSIONS_CREATE",
+  SESSIONS_UPDATE: "SESSIONS_UPDATE",
+  SESSIONS_DELETE: "SESSIONS_DELETE",
+  PAYMENTS_VIEW: "PAYMENTS_VIEW",
+  PAYMENTS_CREATE: "PAYMENTS_CREATE",
+  PAYMENTS_UPDATE: "PAYMENTS_UPDATE",
+  PAYMENTS_DELETE: "PAYMENTS_DELETE",
+  IMAGES_UPLOAD: "IMAGES_UPLOAD",
+  IMAGES_DELETE: "IMAGES_DELETE",
+  DASHBOARD_VIEW: "DASHBOARD_VIEW",
+  CALENDAR_VIEW: "CALENDAR_VIEW",
+} as const;
+
+export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+// A Record keyed by PermissionCode makes a missing description a compile error.
+export const PERMISSION_DESCRIPTIONS: Record<PermissionCode, string> = {
+  PATIENTS_VIEW: "View patients",
+  PATIENTS_CREATE: "Add patients",
+  PATIENTS_UPDATE: "Edit patients",
+  PATIENTS_DELETE: "Delete patients",
+  SESSIONS_VIEW: "View sessions",
+  SESSIONS_CREATE: "Add sessions",
+  SESSIONS_UPDATE: "Edit sessions",
+  SESSIONS_DELETE: "Delete sessions",
+  PAYMENTS_VIEW: "View payments and balances",
+  PAYMENTS_CREATE: "Record payments",
+  PAYMENTS_UPDATE: "Edit payments",
+  PAYMENTS_DELETE: "Delete payments",
+  IMAGES_UPLOAD: "Upload images",
+  IMAGES_DELETE: "Delete images",
+  DASHBOARD_VIEW: "View the financial dashboard",
+  CALENDAR_VIEW: "View the calendar",
+};
+
+export const ALL_PERMISSION_CODES = Object.values(PERMISSIONS);

@@ -26,8 +26,9 @@ services:
           memory: 512M
           cpus: "1"
 
-  # One-off job: applies pending Prisma migrations, then exits. Must finish
-  # before "app" starts, otherwise the app boots against a schema-less DB.
+  # One-off job: applies pending Prisma migrations and syncs the permission
+  # table with src/config/permissions.ts, then exits. Must finish before "app"
+  # starts, otherwise the app boots against a schema-less DB.
   # Uses the "builder" stage (has the full node_modules incl. the prisma CLI,
   # unlike the slim runtime image "app" uses) - CI must also push this stage
   # to GHCR (e.g. tag ":builder-<tag>") since the server only pulls, it doesn't build.
@@ -46,7 +47,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["npx", "prisma", "migrate", "deploy"]
+    # tsx is called directly (not `npm run sync-permissions`): .env isn't in the
+    # image, DATABASE_URL comes from the environment above instead.
+    command:
+      [
+        "sh",
+        "-c",
+        "npx prisma migrate deploy && npx tsx src/scripts/sync-permissions.ts",
+      ]
 
   app:
     image: ghcr.io/omarantar7/dental-clinic:${IMAGE_TAG:-latest}
