@@ -3,6 +3,9 @@ import env from "./env";
 export default {
   isDev: env.NODE_ENV === "development",
   isProd: env.NODE_ENV === "production",
+  app: {
+    url: env.APP_URL,
+  },
   auth: {
     secretKey: env.JWT_SECRET_KEY,
     tokenExpiration: env.TOKEN_EXPIRATION,

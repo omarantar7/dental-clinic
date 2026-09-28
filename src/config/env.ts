@@ -4,6 +4,9 @@ const durationRegex = /^\d+(ms|s|m|h|d|w|y)$/;
 
 const envSchema = z.object({
   NODE_ENV: z.string(),
+  // Public origin of the app, used for links in emails
+  // (e.g. https://dental-clinic.cc, http://localhost:3000 locally).
+  APP_URL: z.url(),
   POSTGRES_USER: z.string(),
   POSTGRES_PASSWORD: z.string(),
   POSTGRES_DB: z.string(),
