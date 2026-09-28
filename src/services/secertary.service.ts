@@ -6,7 +6,6 @@ import { roleRepository } from "@/repositories/role.repository";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import { EmailService } from "@/services/email.service";
-import { secretaryInvitationTemplate } from "@/services/email-templates/secretary-invitation.template";
 import type {
   SecretaryCreateInput,
   SecretaryResponse,
@@ -74,14 +73,11 @@ export class SecretaryService {
         updated_at: secretary.updated_at,
       };
 
-      await EmailService.sendEmail(
-        response.email,
-        secretaryInvitationTemplate({
-          fullName: response.full_name,
-          email: response.email,
-          temporaryPassword: data.password,
-        }),
-      );
+      await EmailService.sendSecretaryInvitation({
+        email: response.email,
+        fullName: response.full_name,
+        temporaryPassword: data.password,
+      });
 
       return response;
     });
