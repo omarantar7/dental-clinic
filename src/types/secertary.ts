@@ -91,7 +91,18 @@ const RegisterSecretarySchema = UserValidationSchema.omit({
 
 type RegisterSecretaryInput = z.infer<typeof RegisterSecretarySchema>;
 
+// Everything authorization needs about a secretary, fetched in one query.
+type SecretaryAccessContext = {
+  doctorId: string;
+  status: SecretaryListItem["status"];
+  permissionCodes: string[];
+};
+
 interface ISecretaryRepository {
+  getAccessContextByUserId(
+    userId: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<SecretaryAccessContext | null>;
   createSecretary(
     data: Secretary,
     tx?: PrismaClientOrTx,
@@ -156,4 +167,5 @@ export {
   type SecretaryUpdateProfileInput,
   type RegisterSecretaryInput,
   type ISecretaryRepository,
+  type SecretaryAccessContext,
 };

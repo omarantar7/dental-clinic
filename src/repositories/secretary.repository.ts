@@ -7,6 +7,7 @@ import type {
   ISecretaryRepository,
   IdentifiableSecretary,
   Secretary,
+  SecretaryAccessContext,
   SecretaryListItem,
 } from "@/types/secertary";
 import type { DynamicWhere, ParsedListQuery } from "@/lib/helpers/query-parser";
@@ -73,6 +74,36 @@ export class SecretaryRepository implements ISecretaryRepository {
       where: { user_id: userId },
     });
     return secretary ? this.toIdentifiableSecretary(secretary) : null;
+  }
+
+  async getAccessContextByUserId(
+    userId: string,
+    tx: PrismaClientOrTx = this.db,
+  ): Promise<SecretaryAccessContext | null> {
+    const secretary = await tx.secretary.findUnique({
+      where: { user_id: userId },
+      select: {
+        doctor_id: true,
+        user: { select: { status: true } },
+        role: {
+          select: {
+            role_permissions: {
+              select: { permission: { select: { code: true } } },
+            },
+          },
+        },
+      },
+    });
+    if (!secretary) return null;
+
+    return {
+      doctorId: secretary.doctor_id,
+      status: secretary.user.status,
+      permissionCodes:
+        secretary.role?.role_permissions.map(
+          ({ permission }) => permission.code,
+        ) ?? [],
+    };
   }
 
   async getSecretaryProfileByUserId(

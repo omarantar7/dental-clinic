@@ -1,11 +1,16 @@
+import prisma from "@/lib/db";
 import type { PrismaClient } from "@/app/generated/prisma/client";
+import type { PrismaClientOrTx } from "@/types/db";
 import type {
   IPermissionRepository,
   PermissionDefinition,
+  PermissionRecord,
 } from "@/types/permission";
 
+const PERMISSION_SELECT = { id: true, code: true, description: true } as const;
+
 export class PermissionRepository implements IPermissionRepository {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(private readonly db: PrismaClient = prisma) {}
 
   /**
    * Makes the `permission` table match `definitions` exactly: upserts every
@@ -32,4 +37,25 @@ export class PermissionRepository implements IPermissionRepository {
       return { removed: count };
     });
   }
+
+  async findAll(tx: PrismaClientOrTx = this.db): Promise<PermissionRecord[]> {
+    return tx.permission.findMany({
+      select: PERMISSION_SELECT,
+      orderBy: { code: "asc" },
+    });
+  }
+
+  async findByCodes(
+    codes: ReadonlyArray<string>,
+    tx: PrismaClientOrTx = this.db,
+  ): Promise<PermissionRecord[]> {
+    return tx.permission.findMany({
+      where: { code: { in: [...codes] } },
+      select: PERMISSION_SELECT,
+    });
+  }
 }
+
+// Convenience singleton for call sites that don't need custom DI.
+// For tests, construct PermissionRepository with a mock PrismaClient instead.
+export const permissionRepository = new PermissionRepository();
