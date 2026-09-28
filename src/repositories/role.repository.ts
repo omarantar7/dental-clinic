@@ -128,15 +128,6 @@ export class RoleRepository implements IRoleRepository {
     }
   }
 
-  async countSecretaries(
-    id: string,
-    tx: PrismaClientOrTx = this.db,
-  ): Promise<number> {
-    return tx.secretary.count({
-      where: { role_id: id, ...ACTIVE_SECRETARY_WHERE },
-    });
-  }
-
   private toRoleListItem(role: RoleRow): RoleListItem {
     return {
       id: role.id,
