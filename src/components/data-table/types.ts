@@ -14,6 +14,8 @@ type DataTableAction<T> = {
   label: string;
   icon: LucideIcon;
   destructive?: boolean;
-} & ({ href: (row: T) => string } | { onClick: (row: T) => void });
+  // Lets callers declare every action once and hide the ones the user can't use.
+  hidden?: boolean;
+} &({ href: (row: T) => string } | { onClick: (row: T) => void });
 
 export type { DataTableAction, DataTableColumn };

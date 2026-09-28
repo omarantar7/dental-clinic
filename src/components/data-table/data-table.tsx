@@ -106,9 +106,10 @@ function DataTable<T>({
   getRowId,
   sort = "",
   onSortChange,
-  actions = [],
+  actions: allActions = [],
   emptyMessage = "No results found.",
 }: DataTableProps<T>) {
+  const actions = allActions.filter((action) => !action.hidden);
   const activeSortField = sort.startsWith("-") ? sort.slice(1) : sort;
 
   const handleSort = (field: string) => {
