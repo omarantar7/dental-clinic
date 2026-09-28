@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "create-doctor": "npx tsx --env-file=.env src/scripts/create-doctor.ts",
     "sync-permissions": "tsx --env-file=.env src/scripts/sync-permissions.ts"
   },
