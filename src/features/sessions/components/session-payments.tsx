@@ -16,6 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
+import { PERMISSIONS } from "@/config/permissions";
+import { useAccess } from "@/hooks/use-access";
 import { PaymentFormDialog } from "@/features/sessions/components/payment-form-dialog";
 import { useDeletePayment } from "@/features/sessions/hooks/use-delete-payment";
 import type { DialogState } from "@/types/dialog-state";
@@ -29,6 +31,10 @@ function SessionPayments({
   remainingBalance,
   onSuccess,
 }: SessionPaymentsProps) {
+  const { can } = useAccess();
+  const canCreate = can(PERMISSIONS.PAYMENTS_CREATE);
+  const canUpdate = can(PERMISSIONS.PAYMENTS_UPDATE);
+  const canDelete = can(PERMISSIONS.PAYMENTS_DELETE);
   const [dialogState, setDialogState] = useState<DialogState<Payment>>(null);
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
   const { deletePayment, isLoading: isDeleting } = useDeletePayment(() => {
@@ -45,14 +51,16 @@ function SessionPayments({
     <Card>
       <CardHeader className="flex items-center justify-between">
         <CardTitle>Payments</CardTitle>
-        <Button
-          size="sm"
-          disabled={remainingBalance <= 0}
-          onClick={() => setDialogState({ mode: "create" })}
-        >
-          <Plus />
-          Add Payment
-        </Button>
+        {canCreate && (
+          <Button
+            size="sm"
+            disabled={remainingBalance <= 0}
+            onClick={() => setDialogState({ mode: "create" })}
+          >
+            <Plus />
+            Add Payment
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {sortedPayments.length === 0 && <Text>No payments recorded yet.</Text>}
@@ -79,48 +87,60 @@ function SessionPayments({
                     {payment.notes}
                   </Text>
                 )}
-                <div className="hidden items-center gap-3 md:flex">
+                {(canUpdate || canDelete) && (
+                  <div className="hidden items-center gap-3 md:flex">
+                    {canUpdate && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() =>
+                          setDialogState({ mode: "edit", data: payment })
+                        }
+                      >
+                        <Pencil />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setDeleteTarget(payment)}
+                      >
+                        <Trash2 />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            {(canUpdate || canDelete) && (
+              <div className="flex gap-2 md:hidden">
+                {canUpdate && (
                   <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() =>
-                      setDialogState({ mode: "edit", data: payment })
-                    }
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setDialogState({ mode: "edit", data: payment })}
                   >
                     <Pencil />
-                    <span className="sr-only">Edit</span>
+                    Edit
                   </Button>
+                )}
+                {canDelete && (
                   <Button
-                    variant="ghost"
-                    size="icon-sm"
+                    variant="destructive"
+                    size="lg"
+                    className="flex-1"
                     onClick={() => setDeleteTarget(payment)}
                   >
                     <Trash2 />
-                    <span className="sr-only">Delete</span>
+                    Delete
                   </Button>
-                </div>
+                )}
               </div>
-            </div>
-            <div className="flex gap-2 md:hidden">
-              <Button
-                variant="outline"
-                size="lg"
-                className="flex-1"
-                onClick={() => setDialogState({ mode: "edit", data: payment })}
-              >
-                <Pencil />
-                Edit
-              </Button>
-              <Button
-                variant="destructive"
-                size="lg"
-                className="flex-1"
-                onClick={() => setDeleteTarget(payment)}
-              >
-                <Trash2 />
-                Delete
-              </Button>
-            </div>
+            )}
           </div>
         ))}
       </CardContent>

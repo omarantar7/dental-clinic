@@ -18,6 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { PERMISSIONS } from "@/config/permissions";
+import { useAccess } from "@/hooks/use-access";
 import { SessionImageFormDialog } from "@/features/sessions/components/session-image-form-dialog";
 import { useDeleteSessionImage } from "@/features/sessions/hooks/use-delete-session-image";
 import { useSessionImages } from "@/features/sessions/hooks/use-session-images";
@@ -25,6 +27,10 @@ import type { DialogState } from "@/types/dialog-state";
 import type { ImageResponse } from "@/types/images";
 
 function SessionImages({ sessionId }: { sessionId: string }) {
+  const { can } = useAccess();
+  const canUpload = can(PERMISSIONS.IMAGES_UPLOAD);
+  const canUpdate = can(PERMISSIONS.IMAGES_UPDATE);
+  const canDelete = can(PERMISSIONS.IMAGES_DELETE);
   const { images, isLoading, refetch } = useSessionImages(sessionId);
   const [dialogState, setDialogState] =
     useState<DialogState<ImageResponse>>(null);
@@ -42,10 +48,12 @@ function SessionImages({ sessionId }: { sessionId: string }) {
     <Card>
       <CardHeader className="flex items-center justify-between">
         <CardTitle>Images</CardTitle>
-        <Button size="sm" onClick={() => setDialogState({ mode: "create" })}>
-          <Plus />
-          Add Image
-        </Button>
+        {canUpload && (
+          <Button size="sm" onClick={() => setDialogState({ mode: "create" })}>
+            <Plus />
+            Add Image
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading && (
@@ -74,52 +82,64 @@ function SessionImages({ sessionId }: { sessionId: string }) {
                     onClick={() => setPreviewImage(image)}
                   />
                   {/* Hover-revealed icons only work with a pointer; touch devices get the labelled buttons below instead */}
-                  <div className="absolute top-1 right-1 hidden gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:flex">
-                    <Button
-                      variant="secondary"
-                      size="icon-xs"
-                      onClick={() =>
-                        setDialogState({ mode: "edit", data: image })
-                      }
-                    >
-                      <Pencil />
-                      <span className="sr-only">Edit</span>
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="icon-xs"
-                      onClick={() => setDeleteTarget(image)}
-                    >
-                      <Trash2 />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
+                  {(canUpdate || canDelete) && (
+                    <div className="absolute top-1 right-1 hidden gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:flex">
+                      {canUpdate && (
+                        <Button
+                          variant="secondary"
+                          size="icon-xs"
+                          onClick={() =>
+                            setDialogState({ mode: "edit", data: image })
+                          }
+                        >
+                          <Pencil />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="secondary"
+                          size="icon-xs"
+                          onClick={() => setDeleteTarget(image)}
+                        >
+                          <Trash2 />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <Text className="truncate text-xs text-foreground">
                   {image.title}
                 </Text>
-                <div className="flex flex-col gap-1 md:hidden">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="flex-1"
-                    onClick={() =>
-                      setDialogState({ mode: "edit", data: image })
-                    }
-                  >
-                    <Pencil />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => setDeleteTarget(image)}
-                  >
-                    <Trash2 />
-                    Delete
-                  </Button>
-                </div>
+                {(canUpdate || canDelete) && (
+                  <div className="flex flex-col gap-1 md:hidden">
+                    {canUpdate && (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="flex-1"
+                        onClick={() =>
+                          setDialogState({ mode: "edit", data: image })
+                        }
+                      >
+                        <Pencil />
+                        Edit
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="destructive"
+                        size="lg"
+                        className="flex-1"
+                        onClick={() => setDeleteTarget(image)}
+                      >
+                        <Trash2 />
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
