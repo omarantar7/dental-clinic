@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   PAYMENTS_UPDATE: "PAYMENTS_UPDATE",
   PAYMENTS_DELETE: "PAYMENTS_DELETE",
   IMAGES_UPLOAD: "IMAGES_UPLOAD",
+  IMAGES_UPDATE: "IMAGES_UPDATE",
   IMAGES_DELETE: "IMAGES_DELETE",
   DASHBOARD_VIEW: "DASHBOARD_VIEW",
   CALENDAR_VIEW: "CALENDAR_VIEW",
@@ -36,9 +37,17 @@ export const PERMISSION_DESCRIPTIONS: Record<PermissionCode, string> = {
   PAYMENTS_UPDATE: "Edit payments",
   PAYMENTS_DELETE: "Delete payments",
   IMAGES_UPLOAD: "Upload images",
+  IMAGES_UPDATE: "Rename or replace images",
   IMAGES_DELETE: "Delete images",
   DASHBOARD_VIEW: "View the financial dashboard",
   CALENDAR_VIEW: "View the calendar",
 };
 
 export const ALL_PERMISSION_CODES = Object.values(PERMISSIONS);
+
+const PERMISSION_CODE_SET: ReadonlySet<string> = new Set(ALL_PERMISSION_CODES);
+
+// Narrows codes read from the database, where the column is a plain string.
+export function isPermissionCode(code: string): code is PermissionCode {
+  return PERMISSION_CODE_SET.has(code);
+}

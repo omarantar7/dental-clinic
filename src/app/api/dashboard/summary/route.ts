@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/config/permissions";
 import { handleApiError } from "@/lib/handle-api-error";
 import { dashboardService } from "@/services/dashboard/dashboard.service";
 import { DashboardQuerySchema } from "@/types/dashboard";
@@ -7,6 +8,7 @@ import { DashboardQuerySchema } from "@/types/dashboard";
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.DASHBOARD_VIEW,
     resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;

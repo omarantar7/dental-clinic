@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/config/permissions";
 import { handleApiError } from "@/lib/handle-api-error";
-import { AuthorizationService } from "@/services/authorization.service";
 import { PaymentService } from "@/services/payment.service";
 import { PaymentUpdateSchema } from "@/types/payment";
 
@@ -11,13 +11,12 @@ export async function PATCH(
 ) {
   const auth = await requireAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.PAYMENTS_UPDATE,
     resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;
 
   try {
-    await AuthorizationService.requirePermission(auth, "EDIT_PAYMENT");
-
     const { id } = await params;
     const body = await request.json();
     const parsedData = PaymentUpdateSchema.safeParse(body);
@@ -53,13 +52,12 @@ export async function DELETE(
 ) {
   const auth = await requireAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.PAYMENTS_DELETE,
     resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;
 
   try {
-    await AuthorizationService.requirePermission(auth, "EDIT_PAYMENT");
-
     const { id } = await params;
     await PaymentService.deletePayment(id, auth.doctorId!);
     return new NextResponse(null, { status: 204 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/config/permissions";
 import { handleApiError } from "@/lib/handle-api-error";
 import { ImageService } from "@/services/image.service";
 import { ImageUpdateSchema } from "@/types/images";
@@ -14,6 +15,7 @@ export async function PATCH(
 ) {
   const auth = await requireAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.IMAGES_UPDATE,
     resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;
@@ -64,6 +66,7 @@ export async function DELETE(
 ) {
   const auth = await requireAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.IMAGES_DELETE,
     resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;

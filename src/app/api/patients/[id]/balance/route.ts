@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireDoctorAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/config/permissions";
 import { handleApiError } from "@/lib/handle-api-error";
 import { PatientService } from "@/services/patient.service";
 import { SessionService } from "@/services/session.service";
@@ -10,6 +11,7 @@ export async function GET(
 ) {
   const auth = await requireDoctorAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.PAYMENTS_VIEW,
   });
   if (auth instanceof NextResponse) return auth;
 

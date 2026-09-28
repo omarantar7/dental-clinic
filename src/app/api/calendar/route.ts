@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/config/permissions";
 import { handleApiError } from "@/lib/handle-api-error";
 import { CalendarService } from "@/services/calendar.service";
 import { CalendarQuerySchema } from "@/types/calendar";
@@ -7,6 +8,7 @@ import { CalendarQuerySchema } from "@/types/calendar";
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.CALENDAR_VIEW,
     resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/config/permissions";
 import { handleApiError } from "@/lib/handle-api-error";
 import { parseQueryString } from "@/lib/helpers/query-parser";
 import { SessionService } from "@/services/session.service";
@@ -8,6 +9,7 @@ import { parseSessionListQuery, SessionCreateSchema } from "@/types/session";
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.SESSIONS_VIEW,
     resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;
@@ -28,6 +30,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request, {
     roles: ["DOCTOR", "SECRETARY"],
+    permission: PERMISSIONS.SESSIONS_CREATE,
     resolveDoctorId: true,
   });
   if (auth instanceof NextResponse) return auth;
