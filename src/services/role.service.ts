@@ -3,7 +3,7 @@ import { ConflictException } from "@/exceptions/http/ConflictException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import { permissionRepository } from "@/repositories/permission.repository";
 import { roleRepository } from "@/repositories/role.repository";
-import type { IPermissionRepository, PermissionRecord } from "@/types/permission";
+import type { IPermissionRepository } from "@/types/permission";
 import type {
   IRoleRepository,
   RoleCreateInput,
@@ -16,11 +16,6 @@ export class RoleService {
     private readonly roleRepository: IRoleRepository,
     private readonly permissionRepository: IPermissionRepository,
   ) {}
-
-  // The catalog a doctor picks from when building a role.
-  async listPermissions(): Promise<PermissionRecord[]> {
-    return this.permissionRepository.findAll();
-  }
 
   async listRoles(doctorId: string): Promise<RoleListItem[]> {
     return this.roleRepository.listByDoctor(doctorId);

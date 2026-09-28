@@ -12,7 +12,6 @@ export interface IPermissionRepository {
   syncAll(
     definitions: ReadonlyArray<PermissionDefinition>,
   ): Promise<{ removed: number }>;
-  findAll(tx?: PrismaClientOrTx): Promise<PermissionRecord[]>;
   findByCodes(
     codes: ReadonlyArray<string>,
     tx?: PrismaClientOrTx,

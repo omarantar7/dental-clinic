@@ -19,7 +19,6 @@ const PROTECTED_API_ROUTES = [
   "/api/payments",
   "/api/secretaries",
   "/api/roles",
-  "/api/permissions",
 ];
 const PUBLIC_API_ROUTES = [
   "/api/auth/login",

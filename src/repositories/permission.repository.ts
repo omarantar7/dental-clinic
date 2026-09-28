@@ -38,13 +38,6 @@ export class PermissionRepository implements IPermissionRepository {
     });
   }
 
-  async findAll(tx: PrismaClientOrTx = this.db): Promise<PermissionRecord[]> {
-    return tx.permission.findMany({
-      select: PERMISSION_SELECT,
-      orderBy: { code: "asc" },
-    });
-  }
-
   async findByCodes(
     codes: ReadonlyArray<string>,
     tx: PrismaClientOrTx = this.db,
