@@ -19,6 +19,9 @@ function buildSchema(mode: "create" | "edit") {
     full_name: z.string().min(3, "At least 3 characters"),
     address: z.string(),
     hired_at: z.string(),
+    role_id: z.string().nullable(),
+    // Edit only; create always starts enabled.
+    enabled: z.boolean(),
   });
 }
 
@@ -47,6 +50,8 @@ function useSecretaryForm({
       full_name: "",
       address: "",
       hired_at: "",
+      role_id: null,
+      enabled: true,
     },
   });
 
@@ -60,6 +65,8 @@ function useSecretaryForm({
       full_name: secretary.full_name ?? "",
       address: "",
       hired_at: toDateInputValue(secretary.hired_at),
+      role_id: secretary.role_id,
+      enabled: secretary.status === "ENABLED",
     });
   }, [mode, secretary, form]);
 
@@ -72,6 +79,7 @@ function useSecretaryForm({
         full_name: data.full_name,
         address: data.address || null,
         hired_at: data.hired_at || null,
+        role_id: data.role_id,
       });
       if (!result) return;
 
@@ -83,6 +91,8 @@ function useSecretaryForm({
     const result = await request("PATCH", `/api/secretaries/${secretary?.id}`, {
       full_name: data.full_name,
       phone_number: data.phone_number,
+      role_id: data.role_id,
+      status: data.enabled ? "ENABLED" : "DISABLED",
     });
     if (!result) return;
 

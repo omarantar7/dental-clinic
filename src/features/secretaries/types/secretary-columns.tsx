@@ -56,11 +56,11 @@ const columns: DataTableColumn<SecretaryListItem>[] = [
     header: "Role",
     cell: (row) => row.role_name ?? "—",
   },
-  // {
-  //   key: "status",
-  //   header: "Status",
-  //   cell: (row) => <SecretaryStatusBadge status={row.status} />,
-  // },
+  {
+    key: "status",
+    header: "Status",
+    cell: (row) => <SecretaryStatusBadge status={row.status} />,
+  },
   {
     key: "hired_at",
     header: "Hired",

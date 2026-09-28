@@ -1,16 +1,30 @@
 "use client";
 
+import { useMemo } from "react";
+import { Controller } from "react-hook-form";
+
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldContent,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useRoles } from "@/features/roles/hooks/use-roles";
 import { useSecretaryForm } from "@/features/secretaries/hooks/use-secretary-form";
 import type { SecretaryFormDialogProps } from "../types/secretary-props";
 
@@ -31,8 +45,18 @@ function SecretaryFormDialog({
   });
   const {
     register,
+    control,
     formState: { errors },
   } = form;
+  const { roles, isLoading: isLoadingRoles } = useRoles();
+  // Passing items lets SelectValue show the role name instead of its id.
+  const roleItems = useMemo(
+    () => [
+      { label: "No role", value: null },
+      ...roles.map((role) => ({ label: role.name, value: role.id })),
+    ],
+    [roles],
+  );
 
   return (
     <ResponsiveDialog
@@ -90,6 +114,59 @@ function SecretaryFormDialog({
             />
             <FieldError errors={[errors.phone_number]} />
           </Field>
+
+          <Field>
+            <FieldLabel htmlFor="role_id">Role</FieldLabel>
+            <Controller
+              control={control}
+              name="role_id"
+              render={({ field }) => (
+                <Select
+                  items={roleItems}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={isLoadingRoles}
+                >
+                  <SelectTrigger id="role_id" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleItems.map((item) => (
+                      <SelectItem key={item.value ?? "none"} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <FieldDescription>
+              Without a role, the secretary can sign in but can&apos;t access
+              anything.
+            </FieldDescription>
+          </Field>
+
+          {mode === "edit" && (
+            <Field orientation="horizontal">
+              <Controller
+                control={control}
+                name="enabled"
+                render={({ field }) => (
+                  <Switch
+                    id="enabled"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+              <FieldContent>
+                <FieldLabel htmlFor="enabled">Account enabled</FieldLabel>
+                <FieldDescription>
+                  A disabled secretary loses access on their next request.
+                </FieldDescription>
+              </FieldContent>
+            </Field>
+          )}
 
           {mode === "create" && (
             <>
