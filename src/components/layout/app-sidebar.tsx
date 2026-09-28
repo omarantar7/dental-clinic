@@ -26,8 +26,14 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { NAV_ITEMS, type NavGroup, type NavLink } from "@/config/nav";
+import {
+  NAV_ITEMS,
+  type NavAccess,
+  type NavGroup,
+  type NavLink,
+} from "@/config/nav";
 import { ProfileMenu } from "@/features/auth/components/profile-menu";
+import { useAccess } from "@/hooks/use-access";
 
 function NavLinkMenuItem({ item }: { item: NavLink }) {
   const pathname = usePathname();
@@ -108,6 +114,11 @@ function NavGroupMenuItem({ item }: { item: NavGroup }) {
 
 function AppSidebar() {
   const { isMobile, toggleSidebar } = useSidebar();
+  const { isDoctor, can } = useAccess();
+
+  const isVisible = (item: NavAccess) =>
+    (!item.doctorOnly || isDoctor) &&
+    (!item.permission || can(item.permission));
 
   return (
     <Sidebar collapsible="icon" side={isMobile ? "right" : "left"}>
@@ -136,11 +147,14 @@ function AppSidebar() {
 
       <SidebarContent>
         <SidebarMenu>
-          {NAV_ITEMS.map((item) =>
+          {NAV_ITEMS.filter(isVisible).map((item) =>
             item.type === "link" ? (
               <NavLinkMenuItem key={item.href} item={item} />
             ) : (
-              <NavGroupMenuItem key={item.label} item={item} />
+              <NavGroupMenuItem
+                key={item.label}
+                item={{ ...item, items: item.items.filter(isVisible) }}
+              />
             ),
           )}
         </SidebarMenu>
