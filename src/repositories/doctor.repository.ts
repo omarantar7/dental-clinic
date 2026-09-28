@@ -1,15 +1,21 @@
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
-import { Prisma } from "@/app/generated/prisma/client";
+import type { PrismaClient } from "@/app/generated/prisma/client";
 import { isPrismaError } from "@/lib/prisma-errors";
-import { Doctor, DoctorProfile, IdentifiableDoctor } from "@/types/doctor";
+import type { PrismaClientOrTx } from "@/types/db";
+import type {
+  Doctor,
+  DoctorProfile,
+  IDoctorRepository,
+  IdentifiableDoctor,
+} from "@/types/doctor";
 
-type PrismaClientOrTx = typeof prisma | Prisma.TransactionClient;
+export class DoctorRepository implements IDoctorRepository {
+  constructor(private readonly db: PrismaClient = prisma) {}
 
-export class DoctorRepository {
-  static async createDoctor(
+  async createDoctor(
     data: Doctor,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<IdentifiableDoctor> {
     try {
       const doctor = await tx.doctor.create({
@@ -21,26 +27,26 @@ export class DoctorRepository {
     }
   }
 
-  static async getDoctor(
+  async getDoctor(
     id: string,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<IdentifiableDoctor> {
     const doctor = await tx.doctor.findUnique({ where: { id } });
     if (!doctor) throw new NotFoundException("doctor not found");
     return this.toIdentifiableDoctor(doctor);
   }
 
-  static async getDoctorByUserId(
+  async getDoctorByUserId(
     userId: string,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<IdentifiableDoctor | null> {
     const doctor = await tx.doctor.findUnique({ where: { user_id: userId } });
     return doctor ? this.toIdentifiableDoctor(doctor) : null;
   }
 
-  static async getDoctorProfileByUserId(
+  async getDoctorProfileByUserId(
     userId: string,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<DoctorProfile> {
     const doctor = await tx.doctor.findUnique({
       where: { user_id: userId },
@@ -50,10 +56,10 @@ export class DoctorRepository {
     return this.toDoctorProfile(doctor);
   }
 
-  static async updateDoctor(
+  async updateDoctor(
     id: string,
     data: Partial<Pick<Doctor, "clinic_address">>,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<IdentifiableDoctor> {
     try {
       const doctor = await tx.doctor.update({
@@ -68,9 +74,9 @@ export class DoctorRepository {
     }
   }
 
-  static async deleteDoctor(
+  async deleteDoctor(
     id: string,
-    tx: PrismaClientOrTx = prisma,
+    tx: PrismaClientOrTx = this.db,
   ): Promise<void> {
     try {
       await tx.doctor.delete({ where: { id } });
@@ -81,7 +87,7 @@ export class DoctorRepository {
     }
   }
 
-  private static toIdentifiableDoctor(doctor: {
+  private toIdentifiableDoctor(doctor: {
     id: string;
     user_id: string;
     clinic_address: string | null;
@@ -93,7 +99,7 @@ export class DoctorRepository {
     };
   }
 
-  private static toDoctorProfile(doctor: {
+  private toDoctorProfile(doctor: {
     id: string;
     user_id: string;
     clinic_address: string | null;
@@ -119,3 +125,7 @@ export class DoctorRepository {
     };
   }
 }
+
+// Convenience singleton for call sites that don't need custom DI.
+// For tests, construct DoctorRepository with a mock PrismaClient instead.
+export const doctorRepository = new DoctorRepository();

@@ -3,8 +3,8 @@ import { InsufficientPermissionException } from "@/exceptions/http/Authorization
 import { ForbiddenException } from "@/exceptions/http/ForbiddenException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import prisma from "@/lib/db";
-import { DoctorRepository } from "@/repositories/doctor.repository";
-import { SecretaryRepository } from "@/repositories/secretary.repository";
+import { doctorRepository } from "@/repositories/doctor.repository";
+import { secretaryRepository } from "@/repositories/secretary.repository";
 
 export class AuthorizationService {
   static async requirePermission(
@@ -13,7 +13,7 @@ export class AuthorizationService {
   ): Promise<void> {
     if (payload.role === "DOCTOR") return;
 
-    const secretary = await SecretaryRepository.getSecretaryByUserId(
+    const secretary = await secretaryRepository.getSecretaryByUserId(
       payload.userId,
     );
     if (!secretary) {
@@ -39,13 +39,13 @@ export class AuthorizationService {
 
   static async resolveDoctorId(payload: TokenUserPayload): Promise<string> {
     if (payload.role === "DOCTOR") {
-      const doctor = await DoctorRepository.getDoctorByUserId(payload.userId);
+      const doctor = await doctorRepository.getDoctorByUserId(payload.userId);
       if (!doctor) throw new NotFoundException("Doctor profile not found");
       return doctor.id;
     }
 
     if (payload.role === "SECRETARY") {
-      const secretary = await SecretaryRepository.getSecretaryByUserId(
+      const secretary = await secretaryRepository.getSecretaryByUserId(
         payload.userId,
       );
       if (!secretary)

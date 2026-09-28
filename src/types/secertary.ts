@@ -2,6 +2,8 @@
 import z from "zod";
 import { UserValidationSchema } from "@/types/user";
 import { createRestQueryParser } from "@/lib/helpers/rest-query";
+import type { ParsedListQuery } from "@/lib/helpers/query-parser";
+import type { PrismaClientOrTx } from "@/types/db";
 
 const parseSecretaryListQuery = createRestQueryParser({
   allowedSortFields: [
@@ -89,6 +91,55 @@ const RegisterSecretarySchema = UserValidationSchema.omit({
 
 type RegisterSecretaryInput = z.infer<typeof RegisterSecretarySchema>;
 
+interface ISecretaryRepository {
+  createSecretary(
+    data: Secretary,
+    tx?: PrismaClientOrTx,
+  ): Promise<
+    IdentifiableSecretary & Pick<SecretaryListItem, "created_at" | "updated_at">
+  >;
+  getSecretary(id: string, tx?: PrismaClientOrTx): Promise<IdentifiableSecretary>;
+  getSecretaryByUserId(
+    userId: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<IdentifiableSecretary | null>;
+  getSecretaryProfileByUserId(
+    userId: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<SecretaryListItem>;
+  updateSecretaryProfileByUserId(
+    userId: string,
+    data: { phone_number?: string; full_name?: string | null },
+    tx?: PrismaClientOrTx,
+  ): Promise<SecretaryListItem>;
+  listSecretariesByDoctorId(
+    doctorId: string,
+    query: ParsedListQuery,
+    tx?: PrismaClientOrTx,
+  ): Promise<{
+    data: SecretaryListItem[];
+    page: number;
+    limit: number;
+    total: number;
+  }>;
+  updateSecretary(
+    id: string,
+    doctorId: string,
+    data: {
+      role_id?: string | null;
+      phone_number?: string;
+      full_name?: string | null;
+      status?: "ENABLED" | "DISABLED" | "DELETED";
+    },
+    tx?: PrismaClientOrTx,
+  ): Promise<SecretaryListItem>;
+  deleteSecretary(
+    id: string,
+    doctorId: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<void>;
+}
+
 export {
   parseSecretaryListQuery,
   SecretaryValidationSchema,
@@ -104,4 +155,5 @@ export {
   type SecretaryUpdateInput,
   type SecretaryUpdateProfileInput,
   type RegisterSecretaryInput,
+  type ISecretaryRepository,
 };

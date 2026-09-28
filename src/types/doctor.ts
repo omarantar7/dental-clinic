@@ -1,5 +1,6 @@
 import z from "zod";
 import { UserValidationSchema } from "@/types/user";
+import type { PrismaClientOrTx } from "@/types/db";
 
 const DoctorValidationSchema = z.object({
   user_id: z.string(),
@@ -41,6 +42,25 @@ type DoctorProfile = {
   updated_at: Date;
 };
 
+interface IDoctorRepository {
+  createDoctor(data: Doctor, tx?: PrismaClientOrTx): Promise<IdentifiableDoctor>;
+  getDoctor(id: string, tx?: PrismaClientOrTx): Promise<IdentifiableDoctor>;
+  getDoctorByUserId(
+    userId: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<IdentifiableDoctor | null>;
+  getDoctorProfileByUserId(
+    userId: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<DoctorProfile>;
+  updateDoctor(
+    id: string,
+    data: Partial<Pick<Doctor, "clinic_address">>,
+    tx?: PrismaClientOrTx,
+  ): Promise<IdentifiableDoctor>;
+  deleteDoctor(id: string, tx?: PrismaClientOrTx): Promise<void>;
+}
+
 export {
   DoctorValidationSchema,
   RegisterDoctorSchema,
@@ -50,4 +70,5 @@ export {
   type RegisterDoctorInput,
   type UpdateDoctorProfileInput,
   type DoctorProfile,
+  type IDoctorRepository,
 };
