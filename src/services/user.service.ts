@@ -1,4 +1,7 @@
-import { InvalidCredentialsException } from "@/exceptions/http/AuthenticationException";
+import {
+  AccountDisabledException,
+  InvalidCredentialsException,
+} from "@/exceptions/http/AuthenticationException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import { UserRepository } from "@/repositories/user.repository";
 import { SafeUser, User } from "@/types/user";
@@ -24,6 +27,15 @@ export class UserService {
 
     if (!passwordMatches) {
       throw new InvalidCredentialsException();
+    }
+
+    // Status is checked after the password so it's only revealed to someone
+    // who already knows it; a deleted account looks like it doesn't exist.
+    if (user.status === "DELETED") {
+      throw new InvalidCredentialsException();
+    }
+    if (user.status === "DISABLED") {
+      throw new AccountDisabledException();
     }
 
     const { password_hash, ...safeUser } = user;

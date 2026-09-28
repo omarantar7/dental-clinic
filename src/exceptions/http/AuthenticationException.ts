@@ -27,6 +27,13 @@ export class AuthenticationFailedException extends AuthenticationException {
   }
 }
 
+export class AccountDisabledException extends AuthenticationException {
+  constructor() {
+    super("Your account is disabled. Contact your doctor.");
+    this.name = "AccountDisabledException";
+  }
+}
+
 export class InvalidCredentialsException extends AuthenticationException {
   constructor() {
     super("Invalid email or password");
