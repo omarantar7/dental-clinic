@@ -6,7 +6,12 @@ import { useApi } from "@/hooks/use-api";
 import type { PatientDetail } from "@/types/patient";
 import type { PatientBalance } from "@/types/session";
 
-function usePatientDetail(patientId: string) {
+// includeBalance is false for users without PAYMENTS_VIEW, whose balance
+// request would only come back 403.
+function usePatientDetail(
+  patientId: string,
+  { includeBalance }: { includeBalance: boolean },
+) {
   const {
     data: patient,
     error,
@@ -18,8 +23,10 @@ function usePatientDetail(patientId: string) {
 
   const refetch = useCallback(() => {
     fetchPatient("GET", `/api/patients/${patientId}`);
-    fetchBalance("GET", `/api/patients/${patientId}/balance`);
-  }, [fetchPatient, fetchBalance, patientId]);
+    if (includeBalance) {
+      fetchBalance("GET", `/api/patients/${patientId}/balance`);
+    }
+  }, [fetchPatient, fetchBalance, patientId, includeBalance]);
 
   useEffect(() => {
     refetch();

@@ -11,10 +11,12 @@ import { Heading } from "@/components/ui/heading";
 import { InfoRow } from "@/components/ui/info-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { PERMISSIONS } from "@/config/permissions";
 import { PatientFormDialog } from "@/features/patients/components/patient-form-dialog";
 import { PatientImages } from "@/features/patients/components/patient-images";
 import { usePatientDetail } from "@/features/patients/hooks/use-patient-detail";
 import { PatientSessions } from "@/features/sessions/components/patient-sessions";
+import { useAccess } from "@/hooks/use-access";
 import { formatCurrency, formatDate } from "@/utils/format";
 
 function BalanceBadge({
@@ -48,8 +50,12 @@ function BalanceBadge({
 }
 
 function PatientDetailView({ patientId }: { patientId: string }) {
-  const { patient, balance, isLoading, error, refetch } =
-    usePatientDetail(patientId);
+  const { can } = useAccess();
+  const canViewPayments = can(PERMISSIONS.PAYMENTS_VIEW);
+  const { patient, balance, isLoading, error, refetch } = usePatientDetail(
+    patientId,
+    { includeBalance: canViewPayments },
+  );
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   if (isLoading && !patient) {
@@ -77,10 +83,12 @@ function PatientDetailView({ patientId }: { patientId: string }) {
           <ArrowLeft />
           Back to patients
         </Button>
-        <Button size="sm" onClick={() => setIsEditOpen(true)}>
-          <Pencil />
-          Edit
-        </Button>
+        {can(PERMISSIONS.PATIENTS_UPDATE) && (
+          <Button size="sm" onClick={() => setIsEditOpen(true)}>
+            <Pencil />
+            Edit
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -94,7 +102,7 @@ function PatientDetailView({ patientId }: { patientId: string }) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="md:col-span-2">
+        <Card className={canViewPayments ? "md:col-span-2" : "md:col-span-3"}>
           <CardHeader>
             <CardTitle>Patient information</CardTitle>
           </CardHeader>
@@ -114,35 +122,39 @@ function PatientDetailView({ patientId }: { patientId: string }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle>Balance</CardTitle>
-            {balance && (
-              <BalanceBadge
-                totalBilled={balance.total_billed}
-                totalPaid={balance.total_paid}
-                totalOwed={balance.total_owed}
+        {canViewPayments && (
+          <Card>
+            <CardHeader className="flex items-center justify-between">
+              <CardTitle>Balance</CardTitle>
+              {balance && (
+                <BalanceBadge
+                  totalBilled={balance.total_billed}
+                  totalPaid={balance.total_paid}
+                  totalOwed={balance.total_owed}
+                />
+              )}
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <InfoRow
+                label="Total billed"
+                value={balance ? formatCurrency(balance.total_billed) : null}
               />
-            )}
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <InfoRow
-              label="Total billed"
-              value={balance ? formatCurrency(balance.total_billed) : null}
-            />
-            <InfoRow
-              label="Total paid"
-              value={balance ? formatCurrency(balance.total_paid) : null}
-            />
-            <InfoRow
-              label="Balance due"
-              value={balance ? formatCurrency(balance.total_owed) : null}
-            />
-          </CardContent>
-        </Card>
+              <InfoRow
+                label="Total paid"
+                value={balance ? formatCurrency(balance.total_paid) : null}
+              />
+              <InfoRow
+                label="Balance due"
+                value={balance ? formatCurrency(balance.total_owed) : null}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      <PatientSessions patientId={patient.id} />
+      {can(PERMISSIONS.SESSIONS_VIEW) && (
+        <PatientSessions patientId={patient.id} />
+      )}
 
       <PatientImages patientId={patient.id} />
 
