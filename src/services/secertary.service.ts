@@ -2,6 +2,7 @@ import prisma from "@/lib/db";
 import { UserRepository } from "@/repositories/user.repository";
 import { secretaryRepository } from "@/repositories/secretary.repository";
 import { doctorRepository } from "@/repositories/doctor.repository";
+import { roleRepository } from "@/repositories/role.repository";
 import { BadRequestException } from "@/exceptions/http/BadRequestException";
 import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import { EmailService } from "@/services/email.service";
@@ -33,9 +34,7 @@ export class SecretaryService {
         throw new NotFoundException("doctor not found for this secretary");
 
       const role = data.role_id
-        ? await tx.role.findFirst({
-              where: { id: data.role_id, doctor_id: doctorId },
-          })
+        ? await roleRepository.findByIdForDoctor(data.role_id, doctorId, tx)
         : null;
       if (data.role_id && !role)
         throw new BadRequestException("role does not belong to doctor");
@@ -97,10 +96,11 @@ export class SecretaryService {
   ): Promise<SecretaryResponse> {
     return prisma.$transaction(async (tx) => {
       if (data.role_id) {
-        const role = await tx.role.findFirst({
-          where: { id: data.role_id, doctor_id: doctorId },
-          select: { id: true },
-        });
+        const role = await roleRepository.findByIdForDoctor(
+          data.role_id,
+          doctorId,
+          tx,
+        );
         if (!role) throw new BadRequestException("role does not belong to doctor");
       }
 
