@@ -33,6 +33,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # Unit tests mock the repositories, so no database or prisma generate is needed.
+      - run: npm test
 
   # Builds the image ONCE and pushes it to GHCR tagged by commit SHA. Both
   # deploy jobs below pull this exact tag - it is never rebuilt per environment.
