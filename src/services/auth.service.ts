@@ -5,7 +5,7 @@ import {
   TokenExpiredException,
 } from "@/exceptions/http/AuthenticationException";
 import jwt, { SignOptions } from "jsonwebtoken";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import ms, { StringValue } from "ms";
 
 export class AuthService {

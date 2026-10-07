@@ -13,7 +13,6 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from "@/components/ui/chart";
 import { formatCurrency } from "@/utils/format";
 import { InteractiveAreaChartProps } from "../types/interactive-area-props";

@@ -2,7 +2,6 @@ import {
   AccountDisabledException,
   InvalidCredentialsException,
 } from "@/exceptions/http/AuthenticationException";
-import { NotFoundException } from "@/exceptions/http/NotFoundException";
 import { UserRepository } from "@/repositories/user.repository";
 import { SafeUser, User } from "@/types/user";
 import bcrypt from "bcrypt";
