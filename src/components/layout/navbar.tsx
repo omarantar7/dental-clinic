@@ -28,7 +28,7 @@ function Navbar() {
     <header className="flex h-12 items-center border-b border-border bg-transparent px-4">
       <div className="flex items-center gap-2 md:hidden">
         <Image src="/dentalLogo.png" alt="" width={24} height={24} />
-        <span className="text-sm font-semibold">Dental Clinic</span>
+        <span className="text-sm font-semibold">DR. Rami's Clinic</span>
       </div>
       <MobileSidebarTrigger />
       <div className="ml-auto hidden items-center gap-2 md:flex">
