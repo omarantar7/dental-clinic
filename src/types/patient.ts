@@ -32,6 +32,7 @@ type PatientListItem = {
   id: string;
   full_name: string;
   phone_number: string;
+  alergies: string | null;
   created_at: Date;
   total_balance: number;
   paid_balance: number;

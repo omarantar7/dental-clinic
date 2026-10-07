@@ -13,7 +13,15 @@ const formatDateTime = (date: Date | string) => {
   return new Date(date).toLocaleString();
 };
 
-const toDateInputValue = (date: Date | string | null) => {
+// e.g. "Oct 2, 2026, 9:00 – 10:30 AM"; collapses the shared date/period.
+const formatDateTimeRange = (start: Date | string, end: Date | string) => {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).formatRange(new Date(start), new Date(end));
+};
+
+const toDateInputValue =(date: Date | string | null) => {
   if (!date) return "";
   return new Date(date).toISOString().slice(0, 10);
 };
@@ -29,6 +37,7 @@ export {
   formatCurrency,
   formatDate,
   formatDateTime,
+  formatDateTimeRange,
   toDateInputValue,
   toDateTimeInputValue,
 };

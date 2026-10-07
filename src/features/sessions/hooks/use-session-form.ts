@@ -16,6 +16,8 @@ interface UseSessionFormOptions {
   mode: "create" | "edit";
   patientId: string;
   sessionId?: string;
+  defaultStartDate?: Date;
+  defaultEndDate?: Date;
   onSuccess: () => void;
 }
 
@@ -23,6 +25,8 @@ function useSessionForm({
   mode,
   patientId,
   sessionId,
+  defaultStartDate,
+  defaultEndDate,
   onSuccess,
 }: UseSessionFormOptions) {
   const {
@@ -37,8 +41,8 @@ function useSessionForm({
     resolver: zodResolver(SessionUpdateSchema),
     defaultValues: {
       session_name: "",
-      session_start_date: "",
-      session_end_date: "",
+      session_start_date: toDateTimeInputValue(defaultStartDate ?? null),
+      session_end_date: toDateTimeInputValue(defaultEndDate ?? null),
       total_amount: 0,
       status: "UNCOMPLETED",
       diagnosis: "",
