@@ -22,8 +22,10 @@ import { useSessionDetail } from "@/features/sessions/hooks/use-session-detail";
 import { useAccess } from "@/hooks/use-access";
 import { formatCurrency, formatDate, formatDateTime } from "@/utils/format";
 import type { SessionDetailViewProps } from "../types/session-props";
+import { useRouter } from "next/navigation";
 
 function SessionDetailView({ patientId, sessionId }: SessionDetailViewProps) {
+  const router = useRouter();
   const { session, isLoading, error, refetch } = useSessionDetail(sessionId);
   const { can } = useAccess();
   const canViewPayments = can(PERMISSIONS.PAYMENTS_VIEW);
@@ -45,14 +47,9 @@ function SessionDetailView({ patientId, sessionId }: SessionDetailViewProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="sm"
-          nativeButton={false}
-          render={<Link href={`/patients/${patientId}`} />}
-        >
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft />
-          Back to patient
+          Back
         </Button>
         {can(PERMISSIONS.SESSIONS_UPDATE) && (
           <Button size="sm" onClick={() => setIsEditOpen(true)}>
