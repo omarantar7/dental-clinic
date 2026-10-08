@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Global FullCalendar styles live here rather than in the calendar component,
+   which is loaded client-only via next/dynamic. */
+@import "@fullcalendar/react/skeleton.css";
+@import "@fullcalendar/react/themes/forma/theme.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -115,6 +119,45 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Sessions calendar: the FullCalendar "forma" theme reads these, so pointing
+   them at the shadcn tokens keeps it in step with light/dark mode. Defined
+   on :root because next-themes toggles .dark on <html>, the same element. */
+:root {
+  --session-uncompleted: oklch(0.546 0.245 262.881);
+  --session-completed: oklch(0.627 0.194 149.214);
+  --session-event-foreground: oklch(0.985 0 0);
+
+  --fc-forma-primary: var(--primary);
+  --fc-forma-primary-over: color-mix(in oklab, var(--primary) 88%, var(--background));
+  --fc-forma-primary-down: color-mix(in oklab, var(--primary) 76%, var(--background));
+  --fc-forma-primary-foreground: var(--primary-foreground);
+
+  --fc-forma-event: var(--session-uncompleted);
+  --fc-forma-event-contrast: var(--session-event-foreground);
+  --fc-forma-background-event: var(--muted);
+  --fc-forma-highlight: color-mix(in oklab, var(--session-uncompleted) 18%, transparent);
+
+  --fc-forma-background: var(--card);
+  --fc-forma-faint: color-mix(in oklab, var(--foreground) 3%, transparent);
+  --fc-forma-muted: color-mix(in oklab, var(--foreground) 7%, transparent);
+  --fc-forma-strong: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --fc-forma-stronger: color-mix(in oklab, var(--foreground) 16%, transparent);
+  --fc-forma-strongest: color-mix(in oklab, var(--foreground) 20%, transparent);
+
+  --fc-forma-foreground: var(--card-foreground);
+  --fc-forma-faint-foreground: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+  --fc-forma-muted-foreground: var(--muted-foreground);
+
+  --fc-forma-border: var(--border);
+  --fc-forma-muted-border: var(--border);
+  --fc-forma-strong-border: var(--ring);
+}
+
+.dark {
+  --session-uncompleted: oklch(0.623 0.214 259.815);
+  --session-completed: oklch(0.627 0.194 149.214);
 }
 
 @layer base {

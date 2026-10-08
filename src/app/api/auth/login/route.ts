@@ -1,5 +1,4 @@
 import { TokenUserPayload } from "@/config/types";
-import { HttpException } from "@/exceptions/http/HttpException";
 import { handleApiError } from "@/lib/handle-api-error";
 import { AuthService } from "@/services/auth.service";
 import { UserService } from "@/services/user.service";

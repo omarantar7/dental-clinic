@@ -1,9 +1,9 @@
 import { AuthService } from "@/services/auth.service";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 const authService = new AuthService();
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const res = NextResponse.json({ message: "Logged out" });
 
   authService.clearTokens(res);

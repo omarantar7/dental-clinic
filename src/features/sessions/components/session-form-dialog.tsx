@@ -27,6 +27,9 @@ function SessionFormDialog({
   mode,
   patientId,
   sessionId,
+  defaultStartDate,
+  defaultEndDate,
+  summary,
   open,
   onOpenChange,
   onSuccess,
@@ -36,6 +39,8 @@ function SessionFormDialog({
       mode,
       patientId,
       sessionId,
+      defaultStartDate,
+      defaultEndDate,
       onSuccess: () => {
         onOpenChange(false);
         onSuccess();
@@ -55,6 +60,8 @@ function SessionFormDialog({
     >
       <form onSubmit={onSubmit} noValidate>
         <FieldGroup>
+          {summary}
+
           <Field data-invalid={!!errors.session_name}>
             <FieldLabel htmlFor="session_name">Session name</FieldLabel>
             <Input

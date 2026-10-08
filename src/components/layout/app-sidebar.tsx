@@ -132,7 +132,7 @@ function AppSidebar() {
             className="shrink-0"
           />
           <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
-            Dental Clinic
+            DR. Rami&apos;s Clinic
           </span>
         </div>
         {isMobile ? (
