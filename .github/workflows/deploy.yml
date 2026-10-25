@@ -31,6 +31,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Use npm 11 (matches local and Dockerfile)
+        run: npm install -g npm@11.21.0
       - run: npm ci
       - run: npm run lint
       # Unit tests mock the repositories, so no database or prisma generate is needed.
@@ -85,70 +87,71 @@ jobs:
   # now rather than deleted, so production can deploy without waiting on a
   # server that doesn't exist yet - re-enable this alongside restoring
   # deploy-production's `needs: [build, deploy-sandbox]` below.
-  deploy-sandbox:
-    if: false
-    needs: build
-    runs-on: ubuntu-latest
-    environment: sandbox
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.sha || github.sha }}
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY }}
-      - name: Trust the server's host key
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+  
+  # deploy-sandbox:
+  #   if: false
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   environment: sandbox
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ inputs.sha || github.sha }}
+  #     - uses: webfactory/ssh-agent@v0.9.0
+  #       with:
+  #         ssh-private-key: ${{ secrets.SSH_KEY }}
+  #     - name: Trust the server's host key
+  #       run: |
+  #         mkdir -p ~/.ssh
+  #         ssh-keyscan -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Stage deploy files
-        run: |
-          mkdir -p deploy_staging/nginx
-          cp docker-compose.yaml deploy_staging/
-          cp deploy/remote-deploy.sh deploy_staging/
-          cp nginx/production.conf nginx/sandbox.conf nginx/init-letsencrypt.sh deploy_staging/nginx/
-          # The app refuses to start without APP_URL, so fail here, before
-          # touching the server, if the environment variable isn't configured.
-          if [ -z "${{ vars.APP_URL }}" ]; then
-            echo "::error::APP_URL variable is not set for this environment"
-            exit 1
-          fi
-          {
-            echo "NODE_ENV=production"
-            echo "IMAGE_TAG=${{ needs.build.outputs.image_tag }}"
-            echo "NGINX_CONF_FILE=${{ vars.NGINX_CONF_FILE }}"
-            echo "APP_URL=${{ vars.APP_URL }}"
-            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"
-            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
-            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"
-            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}"
-            echo "TOKEN_EXPIRATION=${{ secrets.TOKEN_EXPIRATION }}"
-            echo "REFRESH_TOKEN_EXPIRATION=${{ secrets.REFRESH_TOKEN_EXPIRATION }}"
-            echo "OTP_EXPIRATION_MINUTES=${{ secrets.OTP_EXPIRATION_MINUTES }}"
-            echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}"
-            echo "RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}"
-            echo "R2_ENDPOINT=${{ secrets.R2_ENDPOINT }}"
-            echo "R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}"
-            echo "R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}"
-            echo "R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }}"
-            echo "R2_KEY_PREFIX=${{ secrets.R2_KEY_PREFIX }}"
-          } > deploy_staging/.env
+  #     - name: Stage deploy files
+  #       run: |
+  #         mkdir -p deploy_staging/nginx
+  #         cp docker-compose.yaml deploy_staging/
+  #         cp deploy/remote-deploy.sh deploy_staging/
+  #         cp nginx/production.conf nginx/sandbox.conf nginx/init-letsencrypt.sh deploy_staging/nginx/
+  #         # The app refuses to start without APP_URL, so fail here, before
+  #         # touching the server, if the environment variable isn't configured.
+  #         if [ -z "${{ vars.APP_URL }}" ]; then
+  #           echo "::error::APP_URL variable is not set for this environment"
+  #           exit 1
+  #         fi
+  #         {
+  #           echo "NODE_ENV=production"
+  #           echo "IMAGE_TAG=${{ needs.build.outputs.image_tag }}"
+  #           echo "NGINX_CONF_FILE=${{ vars.NGINX_CONF_FILE }}"
+  #           echo "APP_URL=${{ vars.APP_URL }}"
+  #           echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"
+  #           echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
+  #           echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"
+  #           echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}"
+  #           echo "TOKEN_EXPIRATION=${{ secrets.TOKEN_EXPIRATION }}"
+  #           echo "REFRESH_TOKEN_EXPIRATION=${{ secrets.REFRESH_TOKEN_EXPIRATION }}"
+  #           echo "OTP_EXPIRATION_MINUTES=${{ secrets.OTP_EXPIRATION_MINUTES }}"
+  #           echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}"
+  #           echo "RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}"
+  #           echo "R2_ENDPOINT=${{ secrets.R2_ENDPOINT }}"
+  #           echo "R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}"
+  #           echo "R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}"
+  #           echo "R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }}"
+  #           echo "R2_KEY_PREFIX=${{ secrets.R2_KEY_PREFIX }}"
+  #         } > deploy_staging/.env
 
-      - name: Sync files to server
-        run: |
-          rsync -az --delete -e "ssh -p ${{ secrets.SSH_PORT }}" \
-            deploy_staging/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/dental-clinic/"
+  #     - name: Sync files to server
+  #       run: |
+  #         rsync -az --delete -e "ssh -p ${{ secrets.SSH_PORT }}" \
+  #           deploy_staging/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/dental-clinic/"
 
-      - name: Pull and start containers
-        run: |
-          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "GHCR_USERNAME='${{ vars.GHCR_USERNAME }}' GHCR_PAT='${{ secrets.GHCR_PAT }}' bash /opt/dental-clinic/remote-deploy.sh"
+  #     - name: Pull and start containers
+  #       run: |
+  #         ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+  #           "GHCR_USERNAME='${{ vars.GHCR_USERNAME }}' GHCR_PAT='${{ secrets.GHCR_PAT }}' bash /opt/dental-clinic/remote-deploy.sh"
 
-      # Retries because `docker compose up -d` replaces the app container and
-      # nginx returns 502 for the few seconds the new one takes to start.
-      - name: Smoke test
-        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors --max-time 10 "${{ vars.APP_URL }}/" > /dev/null
+  #     # Retries because `docker compose up -d` replaces the app container and
+  #     # nginx returns 502 for the few seconds the new one takes to start.
+  #     - name: Smoke test
+  #       run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors --max-time 10 "${{ vars.APP_URL }}/" > /dev/null
 
   # Same image (needs.build.outputs.image_tag), same steps as deploy-sandbox,
   # targeting the "env" GitHub Environment (production server). Add a required

@@ -1,7 +1,13 @@
 # syntax=docker/dockerfile:1
 
+# ---------- Base: Node 22 + npm 11 (matches local) ----------
+# node:22-alpine ships npm 10, so upgrade it here once and reuse in the stages below
+FROM node:22-alpine AS base
+RUN npm install -g npm@11.21.0
+
+
 # ---------- Stage 1: install dependencies ----------
-FROM node:22-alpine AS deps
+FROM base AS deps
 # All following instructions in this stage run relative to /app
 WORKDIR /app
 # Alpine uses musl instead of glibc; some native Node addons expect glibc, so this compat package prevents them from failing at runtime
@@ -13,7 +19,7 @@ RUN npm ci
 
 
 # ---------- Stage 2: build the app ----------
-FROM node:22-alpine AS builder
+FROM base AS builder
 WORKDIR /app
 # Reuse the node_modules already installed in the deps stage instead of reinstalling
 COPY --from=deps /app/node_modules ./node_modules
@@ -31,6 +37,7 @@ RUN npm run build
 
 
 # ---------- Stage 3: run the app ----------
+# Plain node image is fine here: the runtime never calls npm
 FROM node:22-alpine AS runner
 WORKDIR /app
 # Prisma's toolchain (schema engine) relies on OpenSSL even when the query engine itself isn't used
