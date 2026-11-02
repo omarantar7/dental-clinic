@@ -74,6 +74,11 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    # "web" is the network shared with the droplet-wide nginx (owned by the chefbey
+    # project), which reaches this container as "dental-clinic-app" - see docs/deployment.md
+    networks:
+      - default
+      - web
     logging:
       driver: json-file
       options:
@@ -85,9 +90,14 @@ services:
           memory: 512M
           cpus: "1"
 
+  # nginx + certbot only run when this project has a server to itself
+  # (COMPOSE_PROFILES=standalone in .env, e.g. sandbox). Production shares the
+  # chefbey droplet, whose nginx/certbot already own ports 80/443 and serve
+  # dental-clinic.cc too.
   nginx:
     image: nginx:alpine
     container_name: dental-clinic-nginx
+    profiles: ["standalone"]
     restart: unless-stopped
     ports:
       - "80:80"
@@ -115,6 +125,7 @@ services:
   certbot:
     image: certbot/certbot
     container_name: dental-clinic-certbot
+    profiles: ["standalone"]
     volumes:
       - certbot_certs:/etc/letsencrypt
       - certbot_www:/var/www/certbot
@@ -132,6 +143,10 @@ services:
         limits:
           memory: 128M
           cpus: "0.25"
+
+networks:
+  web:
+    external: true
 
 volumes:
   postgres_data:
