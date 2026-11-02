@@ -119,6 +119,8 @@ jobs:
   #         fi
   #         {
   #           echo "NODE_ENV=production"
+  #           # sandbox has a server to itself, so it runs its own nginx/certbot
+  #           echo "COMPOSE_PROFILES=standalone"
   #           echo "IMAGE_TAG=${{ needs.build.outputs.image_tag }}"
   #           echo "NGINX_CONF_FILE=${{ vars.NGINX_CONF_FILE }}"
   #           echo "APP_URL=${{ vars.APP_URL }}"

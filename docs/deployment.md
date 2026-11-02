@@ -9,6 +9,17 @@ GitHub secrets/variables need to exist for it to run. It covers two servers:
 > `env` (not `production`) in this repo's Settings. Everywhere below that
 > says "the `env` environment," that's the production server's environment.
 
+> **Production shares a droplet with chefbey.org.** The production server is
+> the chefbey droplet (`165.232.67.62`). Its nginx/certbot (owned by the chefbey
+> repo) serve `dental-clinic.cc` and reach this app as `dental-clinic-app` over
+> the external Docker network `web`. So on production this project's own
+> `nginx`/`certbot` services stay off: they're in the `standalone` compose
+> profile, which only a server hosting dental-clinic alone enables
+> (`COMPOSE_PROFILES=standalone`, e.g. sandbox). The nginx config for
+> `dental-clinic.cc` lives in the chefbey repo (`nginx/dental-clinic.conf`), and
+> so does the full write-up and go-live runbook: `docs/shared-droplet.md` in
+> `omarantar7/chefbey`.
+
 > **Current status:** the sandbox server isn't provisioned yet, so
 > `deploy-sandbox` is temporarily disabled (`if: false` in the workflow) and
 > `deploy-production` depends only on `build`, not on sandbox succeeding.
@@ -128,11 +139,15 @@ Before the first CI-driven deploy, on **each** server:
 
 1. Create `/opt/dental-clinic/`, owned by whichever user `SSH_USER` logs in as.
 2. Install `docker`, the `docker compose` v2 plugin, and `rsync`.
-3. Run the TLS bootstrap once by hand (see [nginx/init-letsencrypt.sh](../nginx/init-letsencrypt.sh)):
-   ```bash
-   # production:
-   CERTBOT_EMAIL=you@example.com ./nginx/init-letsencrypt.sh dental-clinic.cc www.dental-clinic.cc
+3. **Production (shared chefbey droplet):** skip `init-letsencrypt.sh` — it
+   needs this project's own nginx/certbot, which don't run there. The
+   `dental-clinic.cc` certificate is issued once with chefbey's certbot; see
+   the go-live runbook in chefbey's `docs/shared-droplet.md`.
 
+   **Standalone servers (sandbox):** run the TLS bootstrap once by hand (see [nginx/init-letsencrypt.sh](../nginx/init-letsencrypt.sh)),
+   with `COMPOSE_PROFILES=standalone` in that server's `.env` so the script's
+   `docker compose` calls see the `nginx`/`certbot` services:
+   ```bash
    # sandbox:
    CERTBOT_EMAIL=you@example.com ./nginx/init-letsencrypt.sh sandbox.dental-clinic.cc
    ```

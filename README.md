@@ -9,6 +9,7 @@ A [Next.js](https://nextjs.org) project for managing a dental clinic's doctors, 
 This project uses Docker Compose to run PostgreSQL locally:
 
 ```bash
+docker network create web   # once: the app service joins this shared network (used in production)
 docker compose up -d
 ```
 
